@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f2233">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Catalogo TE">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+body{margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:14px;-webkit-text-size-adjust:100%}
+img{max-width:100%}[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<title>Catalogo Materiali TE</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: blueprint-navy header with search; a visual grid of drawing cards (home = category tiles with a sample drawing, results = item cards); detail sheet with full table */
+:root{
+  --bg:#e9edf0; --panel:#ffffff; --ink:#131d26; --muted:#617080; --line:#d9e0e5;
+  --band:#0f2233; --band-2:#16314a; --band-ink:#f1f5f8; --band-muted:#93abc0; --grid:rgba(255,255,255,.05);
+  --accent:#ef6a22; --accent-soft:#fde6d8; --code:#0d4566; --obs:#a12d2d; --obs-bg:#fbe7e5;
+  --sheet:#f6f8f9; --chip:#e1e7ec; --hover:#f3f6f8;
+  --f-ui:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+  --f-code:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0c131a; --panel:#161f27; --ink:#e4eaef; --muted:#8fa0ad; --line:#24313b;
+  --band:#08131d; --band-2:#0f2233; --band-ink:#eef3f6; --band-muted:#86a0b5; --grid:rgba(255,255,255,.04);
+  --accent:#f07a38; --accent-soft:#3a2416; --code:#86cbef; --obs:#f3a196; --obs-bg:#3b2323;
+  --sheet:#eef1f3; --chip:#222e38; --hover:#1c2730; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c131a; --panel:#161f27; --ink:#e4eaef; --muted:#8fa0ad; --line:#24313b;
+  --band:#08131d; --band-2:#0f2233; --band-ink:#eef3f6; --band-muted:#86a0b5; --grid:rgba(255,255,255,.04);
+  --accent:#f07a38; --accent-soft:#3a2416; --code:#86cbef; --obs:#f3a196; --obs-bg:#3b2323;
+  --sheet:#eef1f3; --chip:#222e38; --hover:#1c2730; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--f-ui);font-size:16px;line-height:1.4}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--band)}
+.wrap{max-width:1080px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;color:var(--band-ink);
+  background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/22px 22px,linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/22px 22px,linear-gradient(160deg,var(--band-2),var(--band));
+  box-shadow:0 2px 0 var(--accent)}
+header .wrap{padding-block:14px;display:grid;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;cursor:pointer;width:max-content;max-width:100%}
+.logo{width:38px;height:38px;border-radius:10px;background:var(--accent);display:grid;place-items:center;flex:none}
+.brand h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.01em;line-height:1.1}
+.brand p{margin:2px 0 0;color:var(--band-muted);font-size:13px;letter-spacing:.04em;text-transform:uppercase}
+.searchrow{display:flex;gap:8px}
+.sbox{flex:1;min-width:0;position:relative}
+.sbox svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+#q{width:100%;font:500 18px var(--f-ui);padding:13px 42px;border:0;border-radius:12px;background:var(--panel);color:var(--ink);box-shadow:0 1px 0 rgba(0,0,0,.15)}
+#q:focus{outline:2px solid var(--accent);outline-offset:2px}
+#q::-webkit-search-cancel-button{display:none}
+#clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:var(--chip);color:var(--ink);font-size:18px;width:30px;height:30px;cursor:pointer;border-radius:50%;line-height:1}
+.btn{font:600 15px var(--f-ui);border:0;border-radius:12px;padding:0 16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:48px}
+.btn-cam{background:var(--accent);color:#fff}
+.btn-ghost{background:var(--chip);color:var(--ink)}
+.btn:focus-visible,.card:focus-visible,.tile:focus-visible,.back:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.rail{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding:0 max(16px,env(safe-area-inset-left,0px))}
+.rail::-webkit-scrollbar{display:none}
+.chip{flex:none;font:600 13.5px var(--f-code);background:rgba(255,255,255,.08);color:var(--band-ink);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:6px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+main .wrap{padding-block:20px 56px;display:grid;gap:16px}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.bar h2{margin:0;font-size:22px;font-weight:700;text-wrap:balance;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.bar h2 .n{font:600 22px var(--f-code);color:var(--accent)}
+.info{color:var(--muted);font-size:14.5px}
+.tog{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:14px;cursor:pointer;user-select:none}
+.tog input{accent-color:var(--accent);width:17px;height:17px}
+.back{border:0;background:none;color:var(--muted);font:600 14px var(--f-ui);padding:0;cursor:pointer;display:inline-flex;gap:4px;align-items:center;width:max-content}
+.back:hover{color:var(--ink)}
+/* shared drawing frame */
+.fig{background:#fff;display:grid;place-items:center;aspect-ratio:4/3;position:relative;overflow:hidden;
+  background-image:radial-gradient(#dfe6eb 1px,transparent 1px);background-size:14px 14px}
+.fig img{position:absolute;inset:0;margin:auto;max-width:86%;max-height:84%;object-fit:contain;mix-blend-mode:multiply}
+.big img{position:static;margin:0}
+.fig .ph{width:34%;aspect-ratio:1;border-radius:50%;background:#eef2f5;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.4}}
+/* category tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;text-align:left;cursor:pointer;color:inherit;font:inherit;display:grid;padding:0;transition:transform .15s,box-shadow .15s}
+.tile:hover{transform:translateY(-2px);box-shadow:0 10px 24px -14px rgba(10,30,50,.45)}
+.tile .fig{aspect-ratio:16/10;border-bottom:1px solid var(--line)}
+.tile .cap{padding:12px 14px 14px;display:grid;gap:2px}
+.tile .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.tile .num{font:600 24px var(--f-code);color:var(--code);line-height:1.1}
+.tile .cnt{font:600 12px var(--f-ui);color:var(--muted);background:var(--chip);padding:2px 8px;border-radius:999px}
+.tile .lbl{font-weight:600;font-size:15.5px}
+/* item cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;text-align:left;cursor:pointer;color:inherit;font:inherit;display:flex;flex-direction:column;padding:0;transition:transform .15s,box-shadow .15s}
+.card:hover{transform:translateY(-2px);box-shadow:0 10px 24px -14px rgba(10,30,50,.45)}
+.card .fig{border-bottom:1px solid var(--line)}
+.card .badge{position:absolute;top:8px;left:8px;font:600 14px var(--f-code);background:var(--band);color:#fff;padding:3px 8px;border-radius:7px;font-variant-numeric:tabular-nums}
+.card .badge small{color:var(--accent);margin-left:2px}
+.card .obs{position:absolute;top:8px;right:8px}
+.card .cap{padding:10px 12px 12px;display:grid;gap:4px;flex:1;align-content:start}
+.card .t{font-weight:600;font-size:15px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card .m{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.tag-obs{font:700 10px var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--obs);background:var(--obs-bg);padding:3px 6px;border-radius:5px}
+.sect{display:flex;align-items:baseline;gap:10px;margin-top:6px}
+.sect .n{font:600 17px var(--f-code);color:var(--accent)}
+.sect .l{font-weight:700;font-size:16px}
+.sect .c{color:var(--muted);font-size:13.5px}
+.more{width:100%}
+.empty{background:var(--panel);border:1px dashed var(--line);border-radius:14px;padding:24px;color:var(--muted)}
+/* sheet */
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(5,12,18,.55);backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:flex-end}
+.sheet .panel{background:var(--panel);width:100%;max-width:860px;max-height:94%;overflow:auto;border-radius:20px 20px 0 0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(22px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.sheet .panel>*{min-width:0}
+@media (min-width:760px){.sheet{align-items:center}.sheet .panel{border-radius:20px;max-height:90%;padding:22px 24px}}
+.sheet-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.sheet-top .k{font:600 26px var(--f-code);color:var(--code);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sheet-top .k small{font-size:15px;color:var(--accent)}
+.sheet-top h2{margin:4px 0 0;font-size:19px;font-weight:600;text-wrap:balance}
+.x{width:42px;height:42px;min-height:42px;padding:0;border-radius:50%;font-size:18px}
+.big{border:1px solid var(--line);border-radius:14px;aspect-ratio:auto;min-height:200px;padding:14px}
+.big img{max-width:100%;max-height:46vh}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-weight:600;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;background:var(--hover)}
+td.pc{font:600 15px var(--f-code);color:var(--code)}
+tr.hl td{background:var(--accent-soft)}
+tr:last-child td{border-bottom:0}
+.note{font-size:14px;background:var(--hover);border-radius:12px;padding:10px 12px}
+.orig summary{cursor:pointer;color:var(--code);font-weight:600;font-size:15px;padding:4px 0}
+.orig img{width:100%;background:#fff;border-radius:12px;border:1px solid var(--line);margin-top:8px}
+.fine{font-size:12.5px;color:var(--muted);margin:0}
+/* photo */
+.photo{display:grid;gap:12px}
+.photo-head{display:grid;grid-template-columns:110px 1fr;gap:12px;align-items:start}
+.photo-head img{width:110px;height:110px;object-fit:cover;border-radius:12px}
+.status{font-size:15px}
+.cand{display:grid;gap:8px}
+.ccard{display:grid;grid-template-columns:96px 1fr;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px;cursor:pointer;text-align:left;color:inherit;font:inherit;width:100%}
+.ccard .th{width:96px;height:96px;background:#fff;border-radius:10px;display:grid;place-items:center;overflow:hidden}
+.ccard .th img{max-width:90px;max-height:90px;object-fit:contain}
+.ccard .b{min-width:0;display:grid;gap:3px;align-content:start}
+.ccard .k{font:600 16px var(--f-code);color:var(--code);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.conf{font:700 10.5px var(--f-ui);letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:var(--chip);color:var(--ink)}
+.conf.alta{background:#2e7d4f;color:#fff}.conf.media{background:#b7791f;color:#fff}
+.why{font-size:13.5px}
+.meta{font-size:13px;color:var(--muted)}
+@media (max-width:520px){
+  .grid{grid-template-columns:1fr 1fr;gap:10px}
+  .tiles{grid-template-columns:1fr 1fr;gap:10px}
+  .tile .num{font-size:20px}.tile .lbl{font-size:14px}.tile .cap{padding:10px 11px 12px}
+  .card .t{font-size:14px}.card .cap{padding:9px 10px 11px}.card .badge{font-size:13px}
+  .btn-cam .lbl{display:none}.btn-cam{padding:0 13px}
+  .bar h2{font-size:19px}
+}
+/* tabs */
+.tabs{display:flex;gap:4px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:4px;width:max-content;max-width:100%}
+.tabs a{color:var(--band-muted);text-decoration:none;font-weight:600;font-size:14.5px;padding:7px 14px;border-radius:9px;white-space:nowrap}
+.tabs a[aria-current="page"]{background:var(--panel);color:var(--ink)}
+.tabs a:focus-visible{outline:2px solid var(--accent)}
+/* controllo incrociato */
+.ctrl{gap:18px;grid-template-columns:minmax(0,1fr)}
+.ctrl>*{min-width:0}
+.steps>*{min-width:0}
+.ctrl-head h2{margin:0 0 4px;font-size:24px}
+.ctrl-head .info{margin:0;max-width:62ch}
+.banner{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);border-radius:14px;padding:12px 14px;font-size:14.5px}
+.btn-dark{background:var(--band);color:#fff;min-height:42px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:12px;align-content:start}
+.step-h{display:flex;gap:12px;align-items:flex-start}
+.sn{flex:none;width:30px;height:30px;border-radius:50%;background:var(--band);color:#fff;display:grid;place-items:center;font:600 15px var(--f-code)}
+.step h3{margin:0;font-size:17px}
+.step p{margin:2px 0 0;color:var(--muted);font-size:13.5px}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.up{min-height:42px;font-size:14.5px}
+.src{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:9px 10px;background:var(--hover)}
+.src+.src{margin-top:6px}
+.src .ic{width:34px;height:34px;border-radius:9px;background:var(--panel);display:grid;place-items:center;color:var(--code)}
+.src .nm{font-weight:600;font-size:14.5px;overflow-wrap:anywhere}
+.src .sub{font-size:12.5px;color:var(--muted)}
+.src .rm{border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer;width:32px;height:32px;border-radius:8px}
+.src details{grid-column:1/-1;font-size:13px}
+.src details summary{cursor:pointer;color:var(--code);font-weight:600}
+.src details ul{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:2px;max-height:200px;overflow:auto}
+.src details li{display:flex;gap:8px;justify-content:space-between}
+.src details li .c{font-family:var(--f-code);color:var(--code)}
+.src details li.unc{color:var(--obs)}
+.nosrc{font-size:14px;color:var(--muted);border:1px dashed var(--line);border-radius:12px;padding:12px}
+.addrow{display:grid;grid-template-columns:1fr auto 80px auto;gap:6px}
+.addrow input,.addrow select{font:500 15px var(--f-ui);padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);min-width:0}
+.busy{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14.5px;display:flex;gap:10px;align-items:center}
+.busy::before{content:"";width:16px;height:16px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.busy.err::before{display:none}.busy.err{color:var(--obs)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:2px}
+.kpi .l{font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.kpi .v{font:600 28px var(--f-code);font-variant-numeric:tabular-nums}
+.kpi .s{font-size:13px;color:var(--muted)}
+.kpi.hl{background:var(--band);color:#fff;border-color:var(--band)}.kpi.hl .l,.kpi.hl .s{color:var(--band-muted)}
+.pos{color:#2f8a57}.neg{color:#c0392b}
+.kpi.hl .pos{color:#7fe0a6}.kpi.hl .neg{color:#ff9b8e}
+.swaps{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:14px;padding:12px 14px;display:grid;gap:8px}
+.swaps h3{margin:0;font-size:16px}
+.swap{font-size:14.5px;display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+.swap .c{font:600 14px var(--f-code);color:var(--code)}
+.swap .why{color:var(--muted);font-size:13px;flex-basis:100%}
+.filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.fchip{font:600 13.5px var(--f-ui);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.fchip b{font-family:var(--f-code);font-size:12.5px;color:var(--muted)}
+.fchip[aria-pressed="true"]{background:var(--band);color:#fff;border-color:var(--band)}.fchip[aria-pressed="true"] b{color:var(--band-muted)}
+.restools{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.restbl{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow-x:auto}
+.restbl table{font-size:14.5px}
+.restbl td,.restbl th{white-space:normal}
+.restbl td.n,.restbl th.n{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--f-code);white-space:nowrap}
+.restbl td.cd{font:600 14.5px var(--f-code);color:var(--code);white-space:nowrap;cursor:pointer}
+.restbl td.ds{min-width:200px}
+.restbl .srcs{display:block;font-size:12px;color:var(--muted);font-family:var(--f-ui)}
+.sd{display:block;margin-top:3px;font:700 10px var(--f-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sd.sd0{color:#2f8a57}.sd.sd1{color:#1d6fb5}.sd.sd4{color:#b0641a}
+.tot{display:block;margin-top:3px;font:500 11.5px var(--f-ui);color:var(--muted);white-space:nowrap}
+.tot b{font:600 11.5px var(--f-code);color:var(--ink)}
+.tot .pos,.tot .neg,.tot .okc{font:600 11.5px var(--f-code)}.okc{color:var(--muted)}
+.ttot{display:block;margin-top:4px;font-size:13px;color:var(--muted);white-space:nowrap}
+.ttot b{font:600 15px var(--f-code);color:var(--ink)}
+.qin{width:68px;font:600 14.5px var(--f-code);text-align:right;padding:5px 6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.qin.ed{border-color:var(--accent);background:var(--accent-soft)}
+.st{font:700 10.5px var(--f-ui);letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:5px;white-space:nowrap}
+.st.ok{background:#e3f3e9;color:#21704a}.st.piu{background:#e1eefb;color:#1d5f99}.st.meno{background:#fbe5e2;color:#a2322a}.st.nc{background:var(--chip);color:var(--muted)}.st.nuovo{background:#f6ecd5;color:#8a5a00}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .st.ok{background:#1d3a2a;color:#8fe0b1}:root:not([data-theme="light"]) .st.piu{background:#1b2f45;color:#8cc4f5}:root:not([data-theme="light"]) .st.meno{background:#432220;color:#f5a59a}:root:not([data-theme="light"]) .st.nuovo{background:#3d3018;color:#f0c66c}}
+:root[data-theme="dark"] .st.ok{background:#1d3a2a;color:#8fe0b1}:root[data-theme="dark"] .st.piu{background:#1b2f45;color:#8cc4f5}:root[data-theme="dark"] .st.meno{background:#432220;color:#f5a59a}:root[data-theme="dark"] .st.nuovo{background:#3d3018;color:#f0c66c}
+@media (max-width:520px){.addrow{grid-template-columns:1fr 1fr}.addrow #addCode{grid-column:1/-1}.addrow button{grid-column:1/-1}.kpi .v{font-size:23px}.restbl td.ds{min-width:150px}}
+@media (prefers-reduced-motion:reduce){.tile,.card{transition:none}.fig .ph{animation:none}.busy::before{animation:none}}
+@media (prefers-reduced-motion:no-preference){.sheet .panel{animation:up .2s ease-out}@keyframes up{from{transform:translateY(18px);opacity:.6}}}
+</style>
+
+<header>
+  <div class="wrap">
+    <div class="brand" id="home" role="button" tabindex="0" aria-label="Torna alle categorie">
+      <span class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M2 5h20M6 5l3 6M18 5l-3 6M9 11h6M12 11v9M8 20h8"/></svg></span>
+      <div><h1>Catalogo Materiali TE</h1><p>Linea di contatto 3 kV c.c.</p></div>
+    </div>
+    <nav class="tabs" aria-label="Sezioni"><a href="#catalogo" id="tabCat" aria-current="page">Catalogo</a><a href="#controllo" id="tabCtrl">Controllo incrociato</a></nav>
+    <div class="searchrow" id="searchRow">
+      <div class="sbox">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input id="q" type="search" placeholder="766/004, 004, morsetto…" autocomplete="off" enterkeyhint="search" aria-label="Cerca in tutto il catalogo">
+        <button id="clear" aria-label="Cancella ricerca" hidden>×</button>
+      </div>
+      <button class="btn btn-cam" id="camBtn" hidden aria-label="Riconosci da foto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span class="lbl">Foto</span></button>
+      <input type="file" id="camInput" accept="image/*" capture="environment" hidden>
+    </div>
+    <div class="rail" id="rail" role="group" aria-label="Categorie"></div>
+  </div>
+</header>
+
+<main id="catMain"><div class="wrap" id="view"><p class="info">Caricamento catalogo…</p></div></main>
+
+<main id="ctrlMain" hidden><div class="wrap ctrl">
+  <div class="ctrl-head">
+    <h2>Controllo incrociato</h2>
+    <p class="info">Confronta il file vecchio con il conteggio aggiornato (fogli a mano e file) e trova i pezzi in più, in meno e i possibili scambi.</p>
+  </div>
+  <div class="banner" id="exBanner" hidden><span><b>Questo è un esempio</b> con dati inventati su codici veri del catalogo.</span><button class="btn btn-dark" id="startNew">Inizia il tuo controllo</button></div>
+  <div class="steps">
+    <section class="step">
+      <div class="step-h"><span class="sn">1</span><div><h3>File vecchio</h3><p>Excel o CSV con le quantità di prima</p></div></div>
+      <div id="oldBox"></div>
+      <div class="acts"><label class="btn btn-ghost up"><input type="file" id="oldFile" accept=".xlsx,.xls,.csv,.ods,.txt" hidden>Carica file</label><label class="btn btn-ghost up ai-only"><input type="file" id="oldPhoto" accept="image/*" hidden>Foto</label></div>
+    </section>
+    <section class="step">
+      <div class="step-h"><span class="sn">2</span><div><h3>Conteggio aggiornato</h3><p>Puoi aggiungere più fonti: fogli a mano, file, righe inserite qui</p></div></div>
+      <div id="newBox"></div>
+      <div class="acts"><label class="btn btn-ghost up ai-only"><input type="file" id="newPhoto" accept="image/*" multiple hidden>Foto foglio a mano</label><label class="btn btn-ghost up"><input type="file" id="newFile" accept=".xlsx,.xls,.csv,.ods,.txt" multiple hidden>Carica file</label></div>
+      <form class="addrow" id="addForm" autocomplete="off"><input id="addCode" placeholder="Codice es. 768/050/4" aria-label="Codice"><select id="addSd" aria-label="Stato"><option value="0">Nuovo</option><option value="1">Recuperato</option><option value="4">Usato</option><option value="">Non indicato</option></select><input id="addQty" type="number" inputmode="numeric" placeholder="Pezzi" aria-label="Pezzi"><button class="btn btn-dark" type="submit">Aggiungi</button></form>
+    </section>
+  </div>
+  <div class="busy" id="busy" hidden></div>
+  <section id="results"></section>
+</div></main>
+
+<div class="sheet" id="sheet" hidden><div class="panel" id="panel" role="dialog" aria-modal="true"></div></div>
+
+<script src="config.js"></script>
+<script src="shim.js"></script>
+<script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
+<script>
+const $ = s => document.querySelector(s);
+const LABELS = {'766':'Cartelli, tenditori e viere','768':'Attacchi, fasce e mensole','772':'Grappe, collari e bracci','773':'Isolatori','774':'Morsetti e morse','775':'Bracci di poligonazione e tiranti','776':'Pali e portali','779':'Connessioni e capicorda','785':'Corde, fili e trefoli','790':'Attacchi, staffe e prolunghe','794':'Argani e sezionatori','795':'Interruttori e teleruttori','803':'Cavi','822':'Nastri e graffe','846':'Bussole e viti'};
+let DATA = [], BYKEY = {}, CATS = [], COUNTS = {}, COVER = {}, COVERIMG = null;
+const IMG = {}, loading = {};
+let state = {q:'', cat:'', hideObs:false, limit:48};
+
+function norm(s){return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/ø/g,'o')}
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function code(e){return e.p ? `${e.c}/${e.p}` : `${e.c}`}
+function loadCat(c){
+  if (IMG[c]) return Promise.resolve(IMG[c]);
+  if (!loading[c]) loading[c] = fetch(`img_${c}.json`).then(r=>r.json()).then(j=>{IMG[c]=j;fillFigs(c);return j}).catch(()=>{delete loading[c];return {}});
+  return loading[c];
+}
+function imgSrc(e, kind){ const m = IMG[e.c]; if(!m) return null; const b = m[(kind||'d')+e.k] || (kind? null : m['b'+e.k]); return b ? 'data:image/png;base64,'+b : null }
+function figHTML(e){ const s = imgSrc(e); return `<div class="fig" data-fc="${e.c}" data-fi="${e.i}">${s?`<img src="${s}" alt="" loading="lazy">`:'<span class="ph"></span>'}`; }
+function fillFigs(c){ document.querySelectorAll(`.fig[data-fc="${c}"]`).forEach(f=>{ if(f.querySelector('img')) return; const s = imgSrc(DATA[+f.dataset.fi]); f.querySelector('.ph')?.remove(); if(s) f.insertAdjacentHTML('afterbegin',`<img src="${s}" alt="" loading="lazy">`); }); }
+
+async function init(){
+  try{ DATA = await (await fetch('data.json')).json(); }
+  catch(e){ $('#view').innerHTML = '<div class="empty">Non riesco a caricare il catalogo. Ricarica la pagina.</div>'; return; }
+  DATA.forEach((e,i)=>{ e.i=i; (BYKEY[e.k] ||= []).push(e); COUNTS[e.c]=(COUNTS[e.c]||0)+1;
+    e.h = norm([e.c, e.p, code(e), e.c+'-'+e.p, e.t, Object.values(e.v).join(' '), e.n, e.o?'obsoleto':'', LABELS[e.c]].join(' '));
+    if (!COVER[e.c] && e.d && !e.o) COVER[e.c] = e; });
+  CATS = Object.keys(COUNTS).sort();
+  CATS.forEach(c=>{ COVER[c] ||= DATA.find(e=>e.c===c); });
+  try{ state.hideObs = localStorage.getItem('te_hideobs')==='1' }catch(e){}
+  $('#rail').innerHTML = `<button class="chip" data-c="">Tutte</button>` + CATS.map(c=>`<button class="chip" data-c="${c}">${c}</button>`).join('');
+  render();
+  fetch('covers.json').then(r=>r.json()).then(j=>{ COVERIMG=j; document.querySelectorAll('.fig[data-cov]').forEach(f=>{ const b=j[f.dataset.cov]; f.querySelector('.ph')?.remove(); if(b&&!f.querySelector('img')) f.insertAdjacentHTML('afterbegin',`<img src="data:image/png;base64,${b}" alt="">`); }); }).catch(()=>{});
+}
+
+function search(){
+  const raw = state.q.trim();
+  let res = DATA;
+  if (raw){
+    const m = raw.match(/^(\d{3})\s*[\/\-.\s]\s*(\d{1,3})\*{0,2}$/);
+    if (m){ const p = m[2].padStart(3,'0'); res = res.filter(e=>e.c===m[1] && e.p===p); }
+    else if (/^\d{1,3}$/.test(raw)){ const p = raw.padStart(3,'0');
+      res = res.filter(e=>e.p===p).concat(raw.length===3 ? res.filter(e=>e.c===raw && e.p!==p) : []); }
+    else { const toks = norm(raw).split(/\s+/).filter(Boolean); res = res.filter(e=>toks.every(t=>e.h.includes(t))); }
+  } else if (state.cat) res = res.filter(e=>e.c===state.cat);
+  if (state.hideObs) res = res.filter(e=>!e.o);
+  return res;
+}
+function meta(e){
+  const parts = [];
+  for (const [k,val] of Object.entries(e.v)){ if(/^note$|^marche$/i.test(k)) continue;
+    parts.push(/^disegno/i.test(k) ? val : /^peso/i.test(k) ? `${val} kg` : `${k} ${val}`) }
+  return parts.join(' · ');
+}
+function cardHTML(e){
+  return `<button class="card" data-i="${e.i}">${figHTML(e)}
+      <span class="badge">${esc(code(e))}${e.s?`<small>${esc(e.s)}</small>`:''}</span>${e.o?'<span class="obs tag-obs">Obsoleto</span>':''}</div>
+    <span class="cap"><span class="t">${esc(e.t)}</span>${meta(e)?`<span class="m">${esc(meta(e))}</span>`:''}</span></button>`;
+}
+const tog = () => `<label class="tog"><input type="checkbox" id="hideObs"${state.hideObs?' checked':''}> Nascondi obsoleti</label>`;
+
+function render(){
+  const v = $('#view'); const raw = state.q.trim();
+  $('#clear').hidden = !state.q;
+  document.querySelectorAll('.chip').forEach(b=>b.setAttribute('aria-pressed', String(!raw && b.dataset.c===state.cat)));
+  if (!raw && !state.cat){
+    v.innerHTML = `<div class="bar"><h2>Categorie</h2><span class="info">${DATA.length} materiali · ${CATS.length} categorie</span></div>
+      <div class="tiles">${CATS.map(c=>{const e=COVER[c]; return `<button class="tile" data-c="${c}"><div class="fig" data-cov="${c}">${COVERIMG?.[c]?`<img src="data:image/png;base64,${COVERIMG[c]}" alt="">`:'<span class="ph"></span>'}</div>
+        <span class="cap"><span class="top"><span class="num">${c}</span><span class="cnt">${COUNTS[c]}</span></span><span class="lbl">${esc(LABELS[c]||'Categoria '+c)}</span></span></button>`}).join('')}</div>`;
+    return;
+  }
+  const res = search(); const shown = res.slice(0, state.limit);
+  const totals = {}; res.forEach(e=>totals[e.c]=(totals[e.c]||0)+1);
+  let body = '';
+  if (raw){
+    let cur = null, buf = [];
+    const flush = () => { if(cur) body += `<div class="sect"><span class="n">${cur}</span><span class="l">${esc(LABELS[cur]||'')}</span><span class="c">${totals[cur]}</span></div><div class="grid">${buf.join('')}</div>`; };
+    for (const e of shown){ if (e.c!==cur){ flush(); cur=e.c; buf=[] } buf.push(cardHTML(e)) }
+    flush();
+  } else body = `<div class="grid">${shown.map(cardHTML).join('')}</div>`;
+  setTimeout(()=>[...new Set(shown.map(e=>e.c))].forEach(c=>loadCat(c)));
+  const head = raw
+    ? `<div class="bar"><span class="info">${res.length ? `<b>${res.length}</b> ${res.length===1?'risultato':'risultati'} per “${esc(raw)}”` : ''}</span>${tog()}</div>`
+    : `<button class="back" id="back">‹ Tutte le categorie</button><div class="bar"><h2><span class="n">${state.cat}</span>${esc(LABELS[state.cat]||'')}</h2>${tog()}</div>`;
+  v.innerHTML = head + (res.length ? body + (res.length > state.limit ? `<button class="btn btn-ghost more" id="more">Mostra altri (${res.length-state.limit})</button>` : '')
+    : `<div class="empty">Nessun materiale trovato per “${esc(raw)}”. Prova con meno parole o solo il progressivo.</div>`);
+}
+
+$('#view').addEventListener('click', ev => {
+  const t = ev.target;
+  const tile = t.closest('.tile'); if (tile){ setCat(tile.dataset.c); return; }
+  if (t.closest('#back')){ setCat(''); return; }
+  if (t.closest('#more')){ state.limit += 48; render(); return; }
+  const c = t.closest('.card'); if (c) openDetail(DATA[+c.dataset.i]);
+});
+function setCat(c){ if(location.hash==='#controllo') location.hash='catalogo'; state.cat=c; state.q=''; $('#q').value=''; state.limit=48; render(); scrollTo(0,0);
+  const chip = document.querySelector(`.chip[data-c="${c}"]`); chip?.scrollIntoView({inline:'center',block:'nearest'}); }
+$('#rail').onclick = ev => { const b = ev.target.closest('.chip'); if(b) setCat(b.dataset.c); };
+$('#view').addEventListener('change', ev => { if (ev.target.id==='hideObs'){ state.hideObs = ev.target.checked; try{localStorage.setItem('te_hideobs', state.hideObs?'1':'0')}catch(e){} render(); } });
+let tmr; $('#q').oninput = ev => { clearTimeout(tmr); tmr = setTimeout(()=>{ state.q = ev.target.value; state.limit=48; render(); }, 130); };
+$('#clear').onclick = ()=>{ $('#q').value=''; state.q=''; render(); $('#q').focus(); };
+$('#home').onclick = ()=> setCat('');
+$('#home').onkeydown = ev => { if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); setCat(''); } };
+
+/* detail */
+async function openDetail(e){
+  const rows = BYKEY[e.k]; const cols = [...new Set(rows.flatMap(r=>Object.keys(r.v)))];
+  const draw = () => {
+    const src = imgSrc(e,'d'), orig = imgSrc(e,'b');
+    $('#bigimg').innerHTML = src ? `<img src="${src}" alt="Disegno ${esc(code(e))}">` : (orig ? `<img src="${orig}" alt="Scheda ${esc(code(e))}">` : '<span class="info">Disegno non disponibile</span>');
+    $('#origimg').innerHTML = orig ? `<img src="${orig}" alt="Scheda originale">` : '';
+  };
+  $('#panel').innerHTML = `
+    <div class="sheet-top"><div><div class="k">${esc(code(e))}${e.s?`<small>${esc(e.s)}</small>`:''}${e.o?'<span class="tag-obs">Obsoleto</span>':''}</div><h2>${esc(e.t)}</h2></div>
+      <button class="btn btn-ghost x" id="close" aria-label="Chiudi">✕</button></div>
+    <div class="fig big" id="bigimg"><span class="ph"></span></div>
+    ${rows.some(r=>r.p)?`<div class="tbl"><table><thead><tr><th>Progr.</th>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>
+      ${rows.map(r=>`<tr class="${r===e?'hl':''}"><td class="pc">${esc(code(r))}${esc(r.s)}</td>${cols.map(c=>`<td>${esc(r.v[c]||'')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<p class="note">Voce senza progressivo nel catalogo.</p>'}
+    ${e.n?`<div class="note">${esc(e.n)}</div>`:''}
+    <details class="orig"><summary>Scheda originale · pag. ${e.pg} di 124</summary><div id="origimg"></div></details>
+    <p class="fine">Dati letti in automatico dalla scansione del catalogo: per ordini e verbali controlla la scheda originale.</p>`;
+  $('#sheet').hidden = false; $('#close').onclick = closeSheet; $('#close').focus();
+  if (IMG[e.c]) draw(); else { await loadCat(e.c); if (!$('#sheet').hidden && $('#bigimg')) draw(); }
+}
+function closeSheet(){ ctl?.abort(); $('#sheet').hidden = true; }
+$('#sheet').onclick = ev => { if(ev.target.id==='sheet') closeSheet(); };
+document.addEventListener('keydown', ev => { if(ev.key==='Escape' && !$('#sheet').hidden) closeSheet(); });
+
+/* photo recognition */
+let sample = null, LIM = null, ctl = null;
+(async()=>{
+  try{ if(!window.claude) return; sample = await claude.use('sample'); if(!sample) return;
+    LIM = await sample.limits().catch(()=>null); if(!LIM?.images) return;
+    $('#camBtn').hidden = false; $('#camInput').accept = LIM.images.mediaTypes.join(','); if (typeof INV!=='undefined' && INV) renderCtrl();
+  }catch(e){}
+})();
+$('#camBtn').onclick = ()=> $('#camInput').click();
+$('#camInput').onchange = ev => { const f = ev.target.files[0]; ev.target.value=''; if(f) recognize(f); };
+
+function catalogText(){
+  return Object.entries(BYKEY).map(([k,rows])=>{
+    const r0 = rows[0];
+    const pr = rows.filter(r=>r.p).map(r=>{ const x = Object.entries(r.v).filter(([c])=>!/disegno|marche|peso|note/i.test(c)).map(([c,v])=>`${c} ${v}`).join(' '); return r.p + (x?` (${x})`:'') }).join(', ');
+    return `${k} | ${r0.c} | ${r0.t}${r0.o?' [obsoleto]':''} | ${pr||'-'}`;
+  }).join('\n');
+}
+function b64Blob(b64){ const bin = atob(b64); const u = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type:'image/png'}) }
+const ERR = {not_granted:'Serve il tuo permesso per usare Claude su questa pagina.', rate_limited:'Troppe richieste in poco tempo. Riprova tra qualche minuto.', image_rejected:'Questa immagine non va bene. Prova con un’altra foto (JPG o PNG).', session_expired:'Accedi di nuovo a Claude e riprova.', refused:'Claude non ha potuto analizzare questa foto.', invalid_json:'Risposta non leggibile. Riprova.'};
+
+async function recognize(file){
+  ctl?.abort(); ctl = new AbortController(); const signal = ctl.signal;
+  const url = URL.createObjectURL(file);
+  $('#panel').innerHTML = `<div class="sheet-top"><div><div class="k">Da foto</div><h2>Riconoscimento materiale</h2></div><button class="btn btn-ghost" id="close" aria-label="Chiudi">✕</button></div>
+    <div class="photo"><div class="photo-head"><img src="${url}" alt="La tua foto"><div class="status" id="st">Sto guardando la foto e cerco nel catalogo…</div></div><div class="cand" id="cand"></div>
+    <p class="fine">Il riconoscimento è un aiuto: confronta sempre il disegno e le misure prima di usare il progressivo.</p></div>`;
+  $('#sheet').hidden = false; $('#close').onclick = closeSheet;
+  try{
+    const p1 = `Sei un esperto di materiali per la linea di contatto (TE) 3 kV c.c. delle ferrovie italiane (RFI). L'immagine è una foto scattata in campo da un manutentore di un pezzo di materiale.
+Qui sotto c'è l'elenco del catalogo materiali, una voce per riga nel formato: chiave | categoria | descrizione | progressivi (con eventuali misure).
+Individua le voci del catalogo che più probabilmente corrispondono all'oggetto nella foto.
+Rispondi SOLO con JSON nel formato: {"oggetto":"breve descrizione in italiano di cosa vedi nella foto","candidati":["chiave1","chiave2",...]} con da 1 a 6 chiavi, la più probabile per prima. Usa solo chiavi presenti nell'elenco.
+
+CATALOGO:
+${catalogText()}`;
+    const r1 = await sample.json(p1, {images:[file], signal});
+    const keys = (r1?.candidati||[]).map(String).filter(k=>BYKEY[k]).slice(0,6);
+    const seen = r1?.oggetto ? `Vedo: ${r1.oggetto}` : 'Ecco i materiali più simili.';
+    $('#st').textContent = seen;
+    if (!keys.length){ $('#cand').innerHTML = '<div class="empty">Non ho trovato voci simili nel catalogo. Prova una foto più vicina, con il pezzo intero e su sfondo semplice.</div>'; return; }
+    await Promise.all([...new Set(keys.map(k=>BYKEY[k][0].c))].map(loadCat));
+    showCand(keys.map(k=>({k})));
+    const n = Math.min(keys.length, (LIM.images.maxCount||1) - 1);
+    if (n >= 2){
+      $('#st').textContent = seen + ' · Confronto con i disegni…';
+      const withImg = keys.filter(k=>{const c=BYKEY[k][0].c; return IMG[c]?.['d'+k] || IMG[c]?.['b'+k]}).slice(0,n);
+      const blobs = [file, ...withImg.map(k=>{const c=BYKEY[k][0].c; return b64Blob(IMG[c]['d'+k]||IMG[c]['b'+k])})];
+      const desc = withImg.map((k,i)=>{ const rows=BYKEY[k]; return `Immagine ${i+2} = chiave ${k}: ${rows[0].t} — progressivi ${rows.filter(r=>r.p).map(r=>`${r.c}/${r.p} ${Object.entries(r.v).filter(([c])=>!/disegno|marche|note/i.test(c)).map(([c,v])=>c+' '+v).join(' ')}`).join('; ')||'-'}`}).join('\n');
+      const p2 = `Sei un esperto di materiali per la linea di contatto TE 3 kV c.c. RFI. L'immagine 1 è una foto di un pezzo scattata in campo. Le immagini successive sono i disegni tecnici del catalogo per alcune voci candidate:
+${desc}
+Confronta la forma della foto con ciascun disegno. Ordina i candidati dal più probabile e per ognuno dai la confidenza (alta, media o bassa) e un motivo breve in italiano (max 20 parole). Se la voce ha più progressivi che differiscono per misura, indica in "come_distinguere" cosa misurare o controllare per scegliere quello giusto, altrimenti lascia vuoto.
+Rispondi SOLO con JSON: {"risultati":[{"k":"chiave","confidenza":"alta|media|bassa","motivo":"...","come_distinguere":"..."}]}`;
+      const r2 = await sample.json(p2, {images: blobs, signal});
+      const out = (r2?.risultati||[]).filter(x=>BYKEY[String(x.k)]).map(x=>({...x,k:String(x.k)}));
+      if (out.length) showCand(out.concat(keys.filter(k=>!out.some(x=>x.k===k)).map(k=>({k}))));
+      $('#st').textContent = seen;
+    }
+  }catch(e){
+    if (e?.code==='cancelled') return;
+    const st = $('#st'); if (st) st.textContent = ERR[e?.code] || 'Qualcosa non ha funzionato. Riprova con un’altra foto.';
+    if (['not_granted','sampling_disabled','images_unavailable','capability_disabled','not_declared'].includes(e?.code)) $('#camBtn').hidden = true;
+  }
+}
+function showCand(list){
+  $('#cand').innerHTML = list.map(x=>{
+    const rows = BYKEY[x.k]; const e = rows[0]; const src = imgSrc(e);
+    const progs = rows.filter(r=>r.p).map(r=>code(r)).join(', ');
+    return `<button class="ccard" data-i="${e.i}"><div class="th">${src?`<img src="${src}" alt="">`:''}</div>
+      <div class="b"><div class="k">${esc(progs||e.c)}${x.confidenza?`<span class="conf ${esc(x.confidenza)}">${esc(x.confidenza)}</span>`:''}${e.o?'<span class="tag-obs">Obsoleto</span>':''}</div>
+      <div>${esc(e.t)}</div>${x.motivo?`<div class="why">${esc(x.motivo)}</div>`:''}${x.come_distinguere?`<div class="meta">Per scegliere: ${esc(x.come_distinguere)}</div>`:''}</div></button>`}).join('');
+  $('#cand').onclick = ev => { const c = ev.target.closest('.ccard'); if(c) openDetail(DATA[+c.dataset.i]); };
+}
+
+/* ================= CONTROLLO INCROCIATO ================= */
+const CODEMAP = {}; // "766/004" -> entry
+function buildCodeMap(){ DATA.forEach(e=>{ if(e.p){ const c=code(e); if(!CODEMAP[c]) CODEMAP[c]=e; } }); }
+const STATI = {'0':'Nuovo','1':'Recuperato','4':'Usato'};
+const statoLbl = d => d==null||d==='' ? 'Stato non indicato' : (STATI[d] || 'Stato '+d);
+function parseCode(s){
+  s = String(s??'').trim(); if(!s) return null;
+  const m = s.match(/(?:^|[^\d])(\d{3})\s*[\/\-.\s_]\s*(\d{3})\s*[\/\-.\s_]?\s*(\d)(?!\d)/) || s.match(/^(\d{3})(\d{3})(\d)$/);
+  if (m) return {code:`${m[1]}/${m[2]}`, sd:m[3]};
+  const c = normCode(s); return c ? {code:c, sd:null} : null;
+}
+function normCode(s){
+  s = String(s??'').trim(); if(!s) return null;
+  let m = s.match(/(?:^|[^\d])(\d{3})\s*[\/\-.\s_]\s*(\d{1,3})(?!\d)/) || s.match(/^(\d{3})(\d{3})$/);
+  if (!m) return null;
+  return `${m[1]}/${m[2].padStart(3,'0')}`;
+}
+const num = v => { if (typeof v==='number') return v; const t = String(v??'').replace(/\s/g,'').replace(',', '.'); return /^-?\d+(\.\d+)?$/.test(t) ? +t : NaN; };
+
+const EXAMPLE = {
+  example:true,
+  old:{name:'Magazzino_2024.xlsx', kind:'file', rows:[
+    ['766/005/0',12],['766/009/0',40],['768/050/0',8],['768/050/1',3],['768/050/4',2],['768/052/0',6],['773/300/0',10],['773/301/0',10],['773/301/4',4],['774/025/0',30],['774/068/0',20],['774/069/0',15],['774/070/0',12],['775/046/4',5],['779/014/0',6],['779/016/0',4],['779/025/0',2]
+  ].map(([c,q])=>({...parseCode(c),qty:q}))},
+  news:[
+    {id:'a', name:'Foglio a mano (foto)', kind:'foto', rows:[['766/005/0',12],['766/009/0',36],['768/050/0',5],['768/050/1',3],['768/050/4',5],['768/052/0',6],['773/300/0',10],['773/301/0',8],['773/301/4',4]].map(([c,q])=>({...parseCode(c),qty:q}))},
+    {id:'b', name:'Conteggio_parziale.xlsx', kind:'file', rows:[['774/025/0',26],['774/068/0',18],['774/069/0',17],['774/070/0',12],['775/046/4',5],['779/014/0',4],['779/016/0',6],['779/017/1',2]].map(([c,q])=>({...parseCode(c),qty:q}))}
+  ],
+  over:{}
+};
+let INV = null, FILTER = 'diff';
+function saveInv(){ try{ if(!INV.example) localStorage.setItem('te_inv2', JSON.stringify(INV)); }catch(e){} }
+function loadInv(){ try{ const s = localStorage.getItem('te_inv2'); if(s) return JSON.parse(s); }catch(e){} return structuredClone(EXAMPLE); }
+
+/* --- lettura file --- */
+let xlsxReady = null;
+function needXLSX(){ return xlsxReady ||= new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload=()=>res(window.XLSX); s.onerror=()=>{xlsxReady=null;rej(new Error('xlsx'))}; document.head.appendChild(s); }); }
+async function fileToAoa(file){
+  if (/\.(csv|txt)$/i.test(file.name)){
+    const txt = await file.text(); const sep = (txt.split('\n')[0].match(/;/g)||[]).length > (txt.split('\n')[0].match(/,/g)||[]).length ? ';' : (txt.includes('\t')?'\t':',');
+    return txt.split(/\r?\n/).map(l=>l.split(sep).map(c=>c.replace(/^"|"$/g,'').trim()));
+  }
+  const X = await needXLSX(); const wb = X.read(await file.arrayBuffer());
+  let aoa = []; wb.SheetNames.forEach(n=>{ aoa = aoa.concat(X.utils.sheet_to_json(wb.Sheets[n], {header:1, raw:true, defval:''})); });
+  return aoa;
+}
+function guessRows(aoa){
+  aoa = aoa.filter(r=>r && r.some(c=>String(c).trim()!==''));
+  if (!aoa.length) return null;
+  const W = Math.max(...aoa.map(r=>r.length));
+  const col = j => aoa.map(r=>r[j]);
+  const nonEmpty = a => a.filter(v=>String(v??'').trim()!=='');
+  let codeCol=-1, best=0;
+  for (let j=0;j<W;j++){ const v=nonEmpty(col(j)); const k=v.filter(x=>parseCode(x)).length; if(k>best && k>=Math.max(2,v.length*0.3)){best=k;codeCol=j} }
+  let catCol=-1, progCol=-1;
+  if (codeCol<0){
+    for (let j=0;j<W-1;j++){ const a=col(j), b=col(j+1); let k=0;
+      a.forEach((x,i)=>{ if(/^\d{3}$/.test(String(x).trim()) && /^\d{1,3}$/.test(String(b[i]).trim())) k++; });
+      if (k>=Math.max(2,aoa.length*0.3)){ catCol=j; progCol=j+1; break; } }
+  }
+  if (codeCol<0 && catCol<0) return null;
+  const head = aoa.slice(0,5).map(r=>r.map(c=>String(c).toLowerCase()));
+  const used = new Set([codeCol,catCol,progCol]);
+  let sdCol=-1;
+  for (let j=0;j<W;j++){ if(used.has(j)) continue; if (head.some(r=>/^\s*(stato|st\.?|cod\.?\s*stato)\s*$/.test(r[j]||''))){ sdCol=j; break; } }
+  if (sdCol<0 && catCol>=0 && progCol+1<W){ const a=col(progCol+1); if (a.filter(x=>/^\d$/.test(String(x).trim())).length >= aoa.length*0.5) sdCol=progCol+1; }
+  if (sdCol>=0) used.add(sdCol);
+  let qtyCol=-1;
+  for (let j=0;j<W;j++){ if(used.has(j)) continue; if (head.some(r=>/(q\.?t[aà]|quant|pezz|n[°º]|num|giacen|esist|tot|consist|contat)/.test(r[j]||''))){ qtyCol=j; break; } }
+  if (qtyCol<0){ let bestN=0; for (let j=W-1;j>=0;j--){ if(used.has(j)) continue; const k=col(j).filter(x=>!isNaN(num(x))).length; if(k>bestN){bestN=k;qtyCol=j} } }
+  if (qtyCol<0) return null;
+  let descCol=-1, bestL=0;
+  for (let j=0;j<W;j++){ if(used.has(j)||j===qtyCol) continue; const v=nonEmpty(col(j)).map(String); const L=v.reduce((s,x)=>s+(isNaN(num(x))?x.length:0),0)/Math.max(1,v.length); if(L>bestL){bestL=L;descCol=j} }
+  const rows=[];
+  for (const r of aoa){
+    const pc = codeCol>=0 ? parseCode(r[codeCol]) : (/^\d{3}$/.test(String(r[catCol]).trim()) && /^\d{1,3}$/.test(String(r[progCol]).trim()) ? {code:`${String(r[catCol]).trim()}/${String(r[progCol]).trim().padStart(3,'0')}`, sd:null} : null);
+    const q = num(r[qtyCol]);
+    if (!pc || isNaN(q)) continue;
+    let sd = pc.sd; if (sdCol>=0){ const v=String(r[sdCol]??'').trim(); const m=v.match(/^\d$/); if(m) sd=v; else if(/^nuov/i.test(v)) sd='0'; else if(/recup|altra/i.test(v)) sd='1'; else if(/usat/i.test(v)) sd='4'; }
+    rows.push({code:pc.code, sd, qty:q, desc: descCol>=0 ? String(r[descCol]??'').trim() : ''});
+  }
+  return rows.length ? rows : null;
+}
+function catalogCodes(){ return Object.entries(CODEMAP).map(([c,e])=>`${c} ${e.t}`).join('\n'); }
+function cleanAI(list){
+  return (Array.isArray(list)?list:[]).map(x=>{ const pc = parseCode(x.codice); const sd = x.stato!=null && /^\d$/.test(String(x.stato)) ? String(x.stato) : (pc?.sd ?? null); return {code: pc?.code||null, sd, desc:String(x.descrizione||''), qty:num(x.quantita), unc:!!x.incerto}; }).filter(x=>!isNaN(x.qty) && (x.code||x.desc));
+}
+async function aiTable(aoa){
+  if (!sample) throw {code:'no_ai'};
+  const csv = aoa.slice(0,500).map(r=>r.map(c=>String(c??'').replace(/[;\n]/g,' ')).join(';')).join('\n');
+  const p = `Questo è un foglio di inventario di materiali per la linea di contatto TE RFI, in formato CSV (separatore ;). Estrai ogni materiale con la sua quantità.
+Il codice ha la forma categoria/progressivo, es. 766/004 (a volte scritto 766-4, 766.004 o in due colonne). Se manca il codice ma c'è la descrizione, cerca il codice nell'elenco del catalogo qui sotto; se non sei sicuro metti "incerto": true.
+Dopo il progressivo può esserci una cifra di stato del pezzo (es. 768/050/0 o 7680500): 0 = nuovo, 1 = recuperato da un'altra parte, 4 = usato; riportala in "stato" (null se non c'è).
+Rispondi SOLO con JSON: {"righe":[{"codice":"766/004" oppure null,"stato":"0" oppure null,"descrizione":"...","quantita":numero,"incerto":false}]}
+
+FOGLIO:
+${csv}
+
+CATALOGO (codice descrizione):
+${catalogCodes()}`;
+  const r = await sample.json(p);
+  return cleanAI(r?.righe);
+}
+async function aiPhoto(file){
+  if (!sample) throw {code:'no_ai'};
+  const p = `La foto mostra un foglio (spesso scritto a mano) con un conteggio di materiali per la linea di contatto TE RFI. Leggi ogni riga: codice, descrizione se c'è, quantità contata.
+Il codice ha la forma categoria/progressivo, es. 766/004 (può essere scritto 766-4, 766 004, oppure solo il progressivo sotto un'intestazione di categoria). Usa l'elenco del catalogo qui sotto per correggere codici letti male e per trovare il codice dei materiali scritti solo a nome. Se una riga è difficile da leggere metti "incerto": true. Non inventare righe che non ci sono.
+Dopo il progressivo può esserci una cifra di stato del pezzo (es. 768/050/0 o 7680500): 0 = nuovo, 1 = recuperato da un'altra parte, 4 = usato; riportala in "stato" (null se non c'è).
+Rispondi SOLO con JSON: {"righe":[{"codice":"766/004" oppure null,"stato":"0" oppure null,"descrizione":"...","quantita":numero,"incerto":false}]}
+
+CATALOGO (codice descrizione):
+${catalogCodes()}`;
+  const r = await sample.json(p, {images:[file]});
+  return cleanAI(r?.righe);
+}
+function busy(msg, err){ const b=$('#busy'); if(!msg){ b.hidden=true; return; } b.hidden=false; b.textContent=msg; b.classList.toggle('err', !!err); }
+const AIERR = c => c==='no_ai' ? 'Per leggere questo file serve Claude, che non è disponibile in questa vista. Prova con un Excel che abbia una colonna codice e una colonna quantità.' : (ERR[c] || 'Non sono riuscito a leggere il file. Riprova o usa un altro formato.');
+async function readSource(file, isPhoto){
+  if (isPhoto) return {rows: await aiPhoto(file), kind:'foto'};
+  const aoa = await fileToAoa(file);
+  const g = guessRows(aoa);
+  if (g) return {rows:g, kind:'file'};
+  return {rows: await aiTable(aoa), kind:'file'};
+}
+async function addOld(file, isPhoto){
+  if (INV.example) INV = {old:null, news:[], over:{}};
+  busy(isPhoto ? `Claude sta leggendo la foto “${file.name}”…` : `Leggo “${file.name}”…`);
+  try{ const r = await readSource(file, isPhoto); if(!r.rows.length) throw {code:'empty'}; INV.old = {name:file.name, kind:r.kind, rows:r.rows}; saveInv(); busy(); renderCtrl(); }
+  catch(e){ busy(e?.code==='empty' ? `In “${file.name}” non ho trovato righe con codice e quantità.` : AIERR(e?.code), true); renderCtrl(); }
+}
+async function addNew(files, isPhoto){
+  if (INV.example) INV = {old:null, news:[], over:{}};
+  for (const file of files){
+    busy(isPhoto ? `Claude sta leggendo il foglio “${file.name}”…` : `Leggo “${file.name}”…`);
+    try{ const r = await readSource(file, isPhoto); if(!r.rows.length) throw {code:'empty'}; INV.news.push({id:Math.random().toString(36).slice(2), name:file.name, kind:r.kind, rows:r.rows}); saveInv(); busy(); renderCtrl(); }
+    catch(e){ busy(e?.code==='empty' ? `In “${file.name}” non ho trovato righe con codice e quantità.` : AIERR(e?.code), true); renderCtrl(); return; }
+  }
+}
+
+/* --- confronto --- */
+function keyOf(r){ return (r.code || 'd:'+norm(r.desc)) + '|' + (r.sd??''); }
+function compute(){
+  const M = {};
+  const get = r => { const k = keyOf(r); return M[k] ||= {k, code:r.code, sd:r.sd??null, desc:(r.code&&CODEMAP[r.code]?.t)||r.desc||'', old:null, nw:null, srcs:[], unc:false}; };
+  (INV.old?.rows||[]).forEach(r=>{ const it=get(r); it.old=(it.old||0)+r.qty; });
+  INV.news.forEach(s=>s.rows.forEach(r=>{ const it=get(r); it.nw=(it.nw||0)+r.qty; it.srcs.push(s.name); if(r.unc) it.unc=true; }));
+  const items = Object.values(M);
+  for (const it of items){
+    if (INV.over[it.k]!=null){ it.nw = INV.over[it.k]; it.edited = true; }
+    it.diff = (it.nw??0) - (it.old??0);
+    it.st = it.old==null ? 'nuovo' : it.nw==null ? 'nc' : it.diff>0 ? 'piu' : it.diff<0 ? 'meno' : 'ok';
+    it.srcs = [...new Set(it.srcs)];
+  }
+  items.sort((a,b)=> (a.code||'~'+a.desc).localeCompare(b.code||'~'+b.desc) || String(a.sd??'9').localeCompare(String(b.sd??'9')));
+  return items;
+}
+function tokens(t){ return new Set(norm(t).replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w.length>2)); }
+function similar(a,b){ const A=tokens(a), B=tokens(b); if(!A.size||!B.size) return 0; let n=0; A.forEach(w=>{if(B.has(w))n++}); return n/Math.min(A.size,B.size); }
+function findSwaps(items){
+  const minus = items.filter(i=>i.diff<0 && i.nw!=null || i.st==='nc'), plus = items.filter(i=>i.diff>0);
+  const out = [], usedP = new Set();
+  for (const m of minus){
+    const mm = m.st==='nc' ? -(m.old) : m.diff;
+    let best=null, bs=0;
+    for (const p of plus){ if(usedP.has(p.k)) continue;
+      const em = m.code&&CODEMAP[m.code], ep = p.code&&CODEMAP[p.code];
+      let s = 0, why = '';
+      if (m.code && m.code===p.code && m.sd!==p.sd){ s = 3; why = `stesso pezzo in stato diverso: ${statoLbl(m.sd).toLowerCase()} → ${statoLbl(p.sd).toLowerCase()}`; }
+      else if (m.sd!==p.sd) continue;
+      else if (em && ep && em.k===ep.k){ s = 2; why = 'stessa voce del catalogo, cambia solo la misura/variante'; }
+      else { const sim = similar(m.desc,p.desc); if (sim>=0.6 && (!m.code||!p.code||m.code.slice(0,3)===p.code.slice(0,3))){ s = 1+sim/2; why = 'materiali molto simili nella descrizione'; } }
+      if (!s) continue;
+      if (Math.abs(p.diff) === Math.abs(mm)) s += 1;
+      if (s>bs){ bs=s; best={p,why}; }
+    }
+    if (best){ usedP.add(best.p.k); out.push({m, p:best.p, why:best.why, n:Math.min(Math.abs(mm), best.p.diff), exact: Math.abs(mm)===best.p.diff}); }
+  }
+  return out;
+}
+
+/* --- render --- */
+const ST = {ok:'Uguale', piu:'In più', meno:'In meno', nc:'Non contato', nuovo:'Solo nel conteggio'};
+const fmt = n => n==null ? '–' : (Math.round(n*100)/100).toLocaleString('it-IT');
+const sgn = n => n>0 ? `+${fmt(n)}` : fmt(n);
+function srcHTML(s, removable, which){
+  const tot = s.rows.reduce((a,r)=>a+r.qty,0), unc = s.rows.filter(r=>r.unc).length;
+  const icon = s.kind==='foto' ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>' : s.kind==='mano' ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></svg>';
+  return `<div class="src"><span class="ic">${icon}</span><div><div class="nm">${esc(s.name)}</div><div class="sub">${s.rows.length} righe · ${fmt(tot)} pezzi${unc?` · <span class="neg">${unc} da verificare</span>`:''}</div></div>
+    ${removable?`<button class="rm" data-rm="${which}" data-id="${esc(s.id||'')}" aria-label="Rimuovi ${esc(s.name)}">×</button>`:'<span></span>'}
+    <details><summary>Vedi righe lette</summary><ul>${s.rows.map(r=>`<li class="${r.unc?'unc':''}"><span><span class="c">${esc(r.code||'senza codice')}${r.sd!=null?'/'+esc(r.sd):''}</span> ${esc(r.code&&CODEMAP[r.code]?CODEMAP[r.code].t:r.desc)}</span><b>${fmt(r.qty)}</b></li>`).join('')}</ul></details></div>`;
+}
+function renderCtrl(){
+  if (!INV) return;
+  $('#exBanner').hidden = !INV.example;
+  $('#oldBox').innerHTML = INV.old ? srcHTML(INV.old, !INV.example, 'old') : '<div class="nosrc">Nessun file caricato.</div>';
+  $('#newBox').innerHTML = INV.news.length ? INV.news.map(s=>srcHTML(s, !INV.example, 'new')).join('') : '<div class="nosrc">Nessuna fonte caricata.</div>';
+  document.querySelectorAll('.ai-only').forEach(el=>el.hidden = !(LIM?.images));
+  const R = $('#results');
+  if (!INV.old && !INV.news.length){ R.innerHTML = ''; return; }
+  const items = compute();
+  const totOld = items.reduce((a,i)=>a+(i.old||0),0), totNew = items.reduce((a,i)=>a+(i.nw||0),0);
+  const cnt = {}; items.forEach(i=>cnt[i.st]=(cnt[i.st]||0)+1);
+  const ndiff = items.filter(i=>i.st!=='ok').length;
+  const swaps = findSwaps(items);
+  const TOT = {}; items.forEach(i=>{ if(!i.code) return; const t = TOT[i.code] ||= {o:0,n:0,k:0}; t.o += i.old||0; t.n += i.nw||0; t.k++; });
+  const totHTML = i => { const t = i.code && TOT[i.code]; if(!t) return ''; const d = t.n - t.o;
+    if (t.k<2) return ''; return `<span class="tot" title="Totale di ${esc(i.code)} sommando tutti gli stati">Tutti gli stati <b>${fmt(t.o)} → ${fmt(t.n)}</b> <span class="${d>0?'pos':d<0?'neg':'okc'}">${d===0?'=':sgn(d)}</span></span>`; };
+  const shown = items.filter(i=> FILTER==='all' ? true : FILTER==='diff' ? i.st!=='ok' : i.st===FILTER);
+  const fchip = (k,l,n) => `<button class="fchip" data-f="${k}" aria-pressed="${FILTER===k}">${l} <b>${n}</b></button>`;
+  R.innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><span class="l">File vecchio</span><span class="v">${fmt(totOld)}</span><span class="s">pezzi · ${items.filter(i=>i.old!=null).length} articoli</span></div>
+      <div class="kpi"><span class="l">Conteggio aggiornato</span><span class="v">${fmt(totNew)}</span><span class="s">pezzi · ${items.filter(i=>i.nw!=null).length} articoli</span></div>
+      <div class="kpi hl"><span class="l">Differenza</span><span class="v ${totNew-totOld>0?'pos':totNew-totOld<0?'neg':''}">${sgn(totNew-totOld)}</span><span class="s">pezzi, aggiornato meno vecchio</span></div>
+      <div class="kpi"><span class="l">Articoli da guardare</span><span class="v">${ndiff}</span><span class="s">su ${items.length} · ${cnt.ok||0} uguali</span></div>
+    </div>
+    ${swaps.length?`<div class="swaps"><h3>Possibili scambi tra pezzi</h3>${swaps.map(s=>`<div class="swap"><span class="c">${esc(s.m.code||s.m.desc)}${s.m.sd!=null?' '+esc(statoLbl(s.m.sd).toLowerCase()):''}</span> <span class="neg">${sgn(s.m.st==='nc'?-s.m.old:s.m.diff)}</span> ↔ <span class="c">${esc(s.p.code||s.p.desc)}${s.p.sd!=null?' '+esc(statoLbl(s.p.sd).toLowerCase()):''}</span> <span class="pos">${sgn(s.p.diff)}</span><span class="why">${s.exact?(s.m.code===s.p.code ? 'Le quantità si compensano: probabilmente è cambiato lo stato del pezzo (o è stato registrato con lo stato sbagliato)' : 'Le quantità si compensano: probabilmente sono stati contati o registrati uno al posto dell’altro'):'Forse in parte scambiati'} (${esc(s.why)}).</span></div>`).join('')}</div>`:''}
+    <div class="restools"><div class="filters">${fchip('diff','Differenze',ndiff)}${fchip('meno','In meno',cnt.meno||0)}${fchip('piu','In più',cnt.piu||0)}${fchip('nc','Non contati',cnt.nc||0)}${fchip('nuovo','Solo nel conteggio',cnt.nuovo||0)}${fchip('ok','Uguali',cnt.ok||0)}${fchip('all','Tutti',items.length)}</div>
+      <button class="btn btn-ghost up" id="exportBtn" hidden>Scarica risultato (CSV)</button></div>
+    <div class="restbl"><table><thead><tr><th>Codice · stato</th><th>Materiale</th><th class="n">Vecchio</th><th class="n">Aggiornato</th><th class="n">Diff.</th><th>Stato</th></tr></thead><tbody>
+    ${shown.length ? shown.map(i=>`<tr><td class="cd" data-code="${esc(i.code||'')}">${esc(i.code||'—')}${i.code?`<span class="sd sd${esc(i.sd??'x')}">${esc(statoLbl(i.sd))}</span>${totHTML(i)}`:''}</td><td class="ds">${esc(i.desc)}${i.srcs.length?`<span class="srcs">${esc(i.srcs.join(' + '))}${i.edited?' · corretto a mano':''}${i.unc?' · lettura da verificare':''}</span>`:''}</td>
+      <td class="n">${fmt(i.old)}</td><td class="n"><input class="qin${i.edited?' ed':''}" type="number" inputmode="decimal" data-k="${esc(i.k)}" value="${i.nw??''}" placeholder="–" aria-label="Quantità aggiornata ${esc(i.code||i.desc)}"></td>
+      <td class="n ${i.diff>0?'pos':i.diff<0?'neg':''}">${i.st==='nc'?'–':sgn(i.diff)}</td><td><span class="st ${i.st}">${ST[i.st]}</span><span class="ttot">${i.st==='nc' ? 'Totale: da contare' : `Totale <b>${fmt(i.nw)}</b>`}</span></td></tr>`).join('') : `<tr><td colspan="6" class="info">Nessun articolo in questo filtro.</td></tr>`}
+    </tbody></table></div>
+    <p class="fine">Puoi correggere a mano la colonna “Aggiornato”: la differenza si ricalcola subito. Tocca un codice per vedere il disegno.</p>`;
+  if (DL) $('#exportBtn').hidden = false;
+}
+$('#results').addEventListener('click', ev => {
+  const f = ev.target.closest('.fchip'); if (f){ FILTER = f.dataset.f; renderCtrl(); return; }
+  if (ev.target.closest('#exportBtn')){ exportCSV(); return; }
+  const cd = ev.target.closest('td.cd'); if (cd && CODEMAP[cd.dataset.code]) openDetail(CODEMAP[cd.dataset.code]);
+});
+$('#results').addEventListener('change', ev => {
+  const q = ev.target.closest('.qin'); if(!q) return;
+  const v = q.value.trim()==='' ? null : num(q.value);
+  if (v===null) delete INV.over[q.dataset.k]; else if (!isNaN(v)) INV.over[q.dataset.k] = v;
+  saveInv(); renderCtrl();
+});
+document.querySelector('.steps').addEventListener('click', ev => {
+  const b = ev.target.closest('.rm'); if(!b) return;
+  if (b.dataset.rm==='old') INV.old = null; else INV.news = INV.news.filter(s=>s.id!==b.dataset.id);
+  saveInv(); renderCtrl();
+});
+$('#oldFile').onchange = ev => { const f=ev.target.files[0]; ev.target.value=''; if(f) addOld(f,false); };
+$('#oldPhoto').onchange = ev => { const f=ev.target.files[0]; ev.target.value=''; if(f) addOld(f,true); };
+$('#newFile').onchange = ev => { const f=[...ev.target.files]; ev.target.value=''; if(f.length) addNew(f,false); };
+$('#newPhoto').onchange = ev => { const f=[...ev.target.files]; ev.target.value=''; if(f.length) addNew(f,true); };
+$('#addForm').onsubmit = ev => {
+  ev.preventDefault();
+  const pc = parseCode($('#addCode').value), q = num($('#addQty').value), c = pc?.code;
+  const sd = pc?.sd ?? ($('#addSd').value || null);
+  if (!c || isNaN(q)){ busy('Scrivi il codice come 768/050 e il numero di pezzi.', true); return; }
+  busy();
+  if (INV.example) INV = {old:null, news:[], over:{}};
+  let s = INV.news.find(s=>s.kind==='mano'); if(!s){ s = {id:'mano', name:'Inserito a mano', kind:'mano', rows:[]}; INV.news.push(s); }
+  s.rows.push({code:c, sd, qty:q, desc:''}); saveInv(); renderCtrl();
+  $('#addCode').value=''; $('#addQty').value=''; $('#addCode').focus();
+};
+$('#startNew').onclick = () => { INV = {old:null, news:[], over:{}}; FILTER='diff'; saveInv(); renderCtrl(); };
+
+let DL = null;
+(async()=>{ try{ if(window.claude){ DL = await claude.use('downloads'); if(INV) renderCtrl(); } }catch(e){} })();
+async function exportCSV(){
+  const items = compute();
+  const lines = [['Codice','Stato pezzo','Materiale','Vecchio','Aggiornato','Differenza','Esito','Totale','Fonti'].join(';')].concat(items.map(i=>[i.code||'', i.code?statoLbl(i.sd):'', '"'+i.desc.replace(/"/g,'""')+'"', i.old??'', i.nw??'', i.st==='nc'?'':i.diff, ST[i.st], i.st==='nc'?'da contare':(i.nw??''), i.srcs.join(' + ')].join(';')));
+  try{ await DL.save({filename:'controllo_incrociato.csv', data:'﻿'+lines.join('\n')}); }catch(e){}
+}
+
+/* --- navigazione tra le due pagine --- */
+function route(){
+  const ctrl = location.hash === '#controllo';
+  $('#catMain').hidden = ctrl; $('#ctrlMain').hidden = !ctrl;
+  $('#searchRow').hidden = ctrl; $('#rail').hidden = ctrl;
+  $('#tabCat').toggleAttribute('aria-current', !ctrl); $('#tabCtrl').toggleAttribute('aria-current', ctrl);
+  if (ctrl){ $('#tabCtrl').setAttribute('aria-current','page'); } else { $('#tabCat').setAttribute('aria-current','page'); }
+  if (ctrl && DATA.length){ if(!INV) INV = loadInv(); renderCtrl(); }
+  scrollTo(0,0);
+}
+window.addEventListener('hashchange', route);
+init();
+(async()=>{ while(!DATA.length) await new Promise(r=>setTimeout(r,100)); buildCodeMap(); INV = loadInv(); route(); })();
+</script>
+
+</body>
+</html>

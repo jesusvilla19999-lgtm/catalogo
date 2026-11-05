@@ -1,0 +1,30 @@
+{
+ "name": "Catalogo Materiali TE",
+ "short_name": "Catalogo TE",
+ "description": "Catalogo materiali linea di contatto 3 kV c.c. con disegni, ricerca, riconoscimento da foto e controllo incrociato",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "portrait",
+ "background_color": "#e9edf0",
+ "theme_color": "#0f2233",
+ "lang": "it",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
