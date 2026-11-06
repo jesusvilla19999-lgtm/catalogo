@@ -154,6 +154,11 @@ tr:last-child td{border-bottom:0}
   .btn-cam .lbl{display:none}.btn-cam{padding:0 13px}
   .bar h2{font-size:19px}
 }
+.photocard{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;width:100%;text-align:left;cursor:pointer;border:0;border-radius:16px;padding:16px 18px;font:inherit;color:#fff;background:linear-gradient(135deg,var(--accent),#c24a12);box-shadow:0 10px 24px -14px rgba(200,80,20,.7)}
+.photocard .pc-ic{width:54px;height:54px;border-radius:14px;background:rgba(255,255,255,.18);display:grid;place-items:center}
+.photocard .pc-tx{display:grid;gap:2px}.photocard b{font-size:18px}.photocard .pc-tx span{font-size:14px;opacity:.92}
+.photocard .pc-go{font-size:30px;opacity:.85}
+.photocard:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 /* tabs */
 .tabs{display:flex;gap:4px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:4px;width:max-content;max-width:100%}
 .tabs a{color:var(--band-muted);text-decoration:none;font-weight:600;font-size:14.5px;padding:7px 14px;border-radius:9px;white-space:nowrap}
@@ -329,7 +334,7 @@ window.CONFIG = { DATA_BASE: 'https://jesusvilla19999-lgtm.github.io/catalogo/' 
       google.script.run.withSuccessHandler(res).withFailureHandler(function(e){ rej({code:'upstream_error', message:String(e)}); }).ai(payload);
     });
     return fetch(CFG.AI_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload)})
-      .then(function(r){ return r.json(); });
+      .then(function(r){ return r.json(); }, function(){ throw {code:'upstream_error'}; });
   }
   async function json(prompt, opts){
     opts = opts || {};
@@ -338,7 +343,7 @@ window.CONFIG = { DATA_BASE: 'https://jesusvilla19999-lgtm.github.io/catalogo/' 
     if (opts.signal && opts.signal.aborted) throw {code:'cancelled'};
     var r = await callAI({prompt: prompt, images: b64});
     if (opts.signal && opts.signal.aborted) throw {code:'cancelled'};
-    if (!r || r.error) throw {code: (r && r.code) || 'upstream_error', message: r && r.error};
+    if (!r || r.error) throw {code: r && r.code==='not_granted' ? 'no_key' : ((r && r.code) || 'upstream_error'), message: r && r.error};
     return parseJSON(r.text || '');
   }
   var sample = async function(p, o){ var t = JSON.stringify(await json(p, o)); return {text:t, truncated:false}; };
@@ -357,7 +362,7 @@ window.CONFIG = { DATA_BASE: 'https://jesusvilla19999-lgtm.github.io/catalogo/' 
 <script>
 const $ = s => document.querySelector(s);
 const LABELS = {'766':'Cartelli, tenditori e viere','768':'Attacchi, fasce e mensole','772':'Grappe, collari e bracci','773':'Isolatori','774':'Morsetti e morse','775':'Bracci di poligonazione e tiranti','776':'Pali e portali','779':'Connessioni e capicorda','785':'Corde, fili e trefoli','790':'Attacchi, staffe e prolunghe','794':'Argani e sezionatori','795':'Interruttori e teleruttori','803':'Cavi','822':'Nastri e graffe','846':'Bussole e viti'};
-let DATA = [], BYKEY = {}, CATS = [], COUNTS = {}, COVER = {}, COVERIMG = null;
+let DATA = [], BYKEY = {}, CATS = [], COUNTS = {}, COVER = {}, COVERIMG = null, CAM_OK = false;
 const IMG = {}, loading = {};
 let state = {q:'', cat:'', hideObs:false, limit:48};
 
@@ -418,7 +423,7 @@ function render(){
   $('#clear').hidden = !state.q;
   document.querySelectorAll('.chip').forEach(b=>b.setAttribute('aria-pressed', String(!raw && b.dataset.c===state.cat)));
   if (!raw && !state.cat){
-    v.innerHTML = `<div class="bar"><h2>Categorie</h2><span class="info">${DATA.length} materiali · ${CATS.length} categorie</span></div>
+    v.innerHTML = (CAM_OK ? `<button class="photocard" id="photoCard"><span class="pc-ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span class="pc-tx"><b>Che pezzo è?</b><span>Fai una foto al materiale: ti dico categoria e progressivo</span></span><span class="pc-go">›</span></button>` : '') + `<div class="bar"><h2>Categorie</h2><span class="info">${DATA.length} materiali · ${CATS.length} categorie</span></div>
       <div class="tiles">${CATS.map(c=>{const e=COVER[c]; return `<button class="tile" data-c="${c}"><div class="fig" data-cov="${c}">${COVERIMG?.[c]?`<img src="data:image/png;base64,${COVERIMG[c]}" alt="">`:'<span class="ph"></span>'}</div>
         <span class="cap"><span class="top"><span class="num">${c}</span><span class="cnt">${COUNTS[c]}</span></span><span class="lbl">${esc(LABELS[c]||'Categoria '+c)}</span></span></button>`}).join('')}</div>`;
     return;
@@ -442,6 +447,7 @@ function render(){
 
 $('#view').addEventListener('click', ev => {
   const t = ev.target;
+  if (t.closest('#photoCard')){ $('#camInput').click(); return; }
   const tile = t.closest('.tile'); if (tile){ setCat(tile.dataset.c); return; }
   if (t.closest('#back')){ setCat(''); return; }
   if (t.closest('#more')){ state.limit += 48; render(); return; }
@@ -485,7 +491,7 @@ let sample = null, LIM = null, ctl = null;
 (async()=>{
   try{ if(!window.claude) return; sample = await claude.use('sample'); if(!sample) return;
     LIM = await sample.limits().catch(()=>null); if(!LIM?.images) return;
-    $('#camBtn').hidden = false; $('#camInput').accept = LIM.images.mediaTypes.join(','); if (typeof INV!=='undefined' && INV) renderCtrl();
+    $('#camBtn').hidden = false; CAM_OK = true; $('#camInput').accept = LIM.images.mediaTypes.join(','); if (!state.q.trim() && !state.cat && location.hash!=='#controllo') render(); if (typeof INV!=='undefined' && INV) renderCtrl();
   }catch(e){}
 })();
 $('#camBtn').onclick = ()=> $('#camInput').click();
@@ -499,7 +505,7 @@ function catalogText(){
   }).join('\n');
 }
 function b64Blob(b64){ const bin = atob(b64); const u = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type:'image/png'}) }
-const ERR = {not_granted:'Serve il tuo permesso per usare Claude su questa pagina.', rate_limited:'Troppe richieste in poco tempo. Riprova tra qualche minuto.', image_rejected:'Questa immagine non va bene. Prova con un’altra foto (JPG o PNG).', session_expired:'Accedi di nuovo a Claude e riprova.', refused:'Claude non ha potuto analizzare questa foto.', invalid_json:'Risposta non leggibile. Riprova.'};
+const ERR = {no_key:'Il riconoscimento non è ancora attivo: manca la chiave Gemini nel sito Apps Script (Impostazioni progetto → Proprietà script → GEMINI_API_KEY).', upstream_error:'Il servizio di riconoscimento non risponde. Controlla la connessione e riprova.', not_granted:'Serve il tuo permesso per usare Claude su questa pagina.', rate_limited:'Troppe richieste in poco tempo. Riprova tra qualche minuto.', image_rejected:'Questa immagine non va bene. Prova con un’altra foto (JPG o PNG).', session_expired:'Accedi di nuovo a Claude e riprova.', refused:'Claude non ha potuto analizzare questa foto.', invalid_json:'Risposta non leggibile. Riprova.'};
 
 async function recognize(file){
   ctl?.abort(); ctl = new AbortController(); const signal = ctl.signal;

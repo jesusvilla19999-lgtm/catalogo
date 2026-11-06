@@ -37,7 +37,7 @@
       google.script.run.withSuccessHandler(res).withFailureHandler(function(e){ rej({code:'upstream_error', message:String(e)}); }).ai(payload);
     });
     return fetch(CFG.AI_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload)})
-      .then(function(r){ return r.json(); });
+      .then(function(r){ return r.json(); }, function(){ throw {code:'upstream_error'}; });
   }
   async function json(prompt, opts){
     opts = opts || {};
@@ -46,7 +46,7 @@
     if (opts.signal && opts.signal.aborted) throw {code:'cancelled'};
     var r = await callAI({prompt: prompt, images: b64});
     if (opts.signal && opts.signal.aborted) throw {code:'cancelled'};
-    if (!r || r.error) throw {code: (r && r.code) || 'upstream_error', message: r && r.error};
+    if (!r || r.error) throw {code: r && r.code==='not_granted' ? 'no_key' : ((r && r.code) || 'upstream_error'), message: r && r.error};
     return parseJSON(r.text || '');
   }
   var sample = async function(p, o){ var t = JSON.stringify(await json(p, o)); return {text:t, truncated:false}; };
