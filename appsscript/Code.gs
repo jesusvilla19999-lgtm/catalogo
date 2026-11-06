@@ -12,7 +12,9 @@
  *     Valore: la chiave presa da https://aistudio.google.com/apikey
  */
 
-var MODELLO = 'gemini-2.5-flash'; // se Google lo cambia, basta scrivere qui il nome nuovo
+// Modelli da provare in ordine. Se uno è occupato o non esiste più si passa al successivo,
+// e alla fine si prova qualunque altro modello "flash" disponibile per la tua chiave.
+var MODELLI = ['gemini-3.8-flash', 'gemini-3.8-flash-lite', 'gemini-3-flash', 'gemini-flash-latest'];
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
@@ -33,18 +35,9 @@ function doPost(e) {
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
 
-// Chiamata dal sito Apps Script (google.script.run.ai) e da doPost
-function ai(payload) {
-  var key = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
-  if (!key) return { error: 'Manca la chiave GEMINI_API_KEY nelle proprietà dello script', code: 'not_granted' };
-
-  var parts = [{ text: String(payload.prompt || '') }];
-  (payload.images || []).slice(0, 8).forEach(function (b64) {
-    parts.push({ inline_data: { mime_type: 'image/jpeg', data: b64 } });
-  });
-
-  var res = UrlFetchApp.fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/' + MODELLO + ':generateContent',
+function chiamaModello_(modello, key, parts) {
+  return UrlFetchApp.fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modello + ':generateContent',
     {
       method: 'post',
       contentType: 'application/json',
@@ -56,16 +49,58 @@ function ai(payload) {
       })
     }
   );
+}
 
-  var code = res.getResponseCode();
-  if (code === 429) return { error: 'Troppe richieste a Gemini, riprova tra poco', code: 'rate_limited' };
-  if (code !== 200) return { error: 'Gemini ha risposto ' + code + ': ' + res.getContentText().slice(0, 300), code: 'upstream_error' };
+function altriModelli_(key) {
+  try {
+    var cache = CacheService.getScriptCache();
+    var c = cache.get('modelli');
+    if (c) return JSON.parse(c);
+    var r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key }, muteHttpExceptions: true });
+    var list = (JSON.parse(r.getContentText()).models || [])
+      .filter(function (m) { return (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0 && /flash/i.test(m.name) && !/image|tts|audio|live|embed|thinking/i.test(m.name); })
+      .map(function (m) { return m.name.replace('models/', ''); });
+    cache.put('modelli', JSON.stringify(list), 6 * 3600);
+    return list;
+  } catch (e) { return []; }
+}
 
-  var data = JSON.parse(res.getContentText());
-  var cand = (data.candidates || [])[0];
-  var text = cand && cand.content && cand.content.parts ? cand.content.parts.map(function (p) { return p.text || ''; }).join('') : '';
-  if (!text) return { error: 'Risposta vuota da Gemini', code: 'refused' };
-  return { text: text };
+// Chiamata dal sito Apps Script (google.script.run.ai) e da doPost
+function ai(payload) {
+  var key = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  if (!key) return { error: 'Manca la chiave GEMINI_API_KEY nelle proprietà dello script', code: 'not_granted' };
+
+  var parts = [{ text: String(payload.prompt || '') }];
+  (payload.images || []).slice(0, 8).forEach(function (b64) {
+    parts.push({ inline_data: { mime_type: 'image/jpeg', data: b64 } });
+  });
+
+  var provati = {}, ultimo = '';
+  var coda = MODELLI.slice();
+  var listaCaricata = false;
+  while (coda.length) {
+    var modello = coda.shift();
+    if (provati[modello]) continue;
+    provati[modello] = true;
+    for (var tentativo = 0; tentativo < 2; tentativo++) {
+      var res = chiamaModello_(modello, key, parts);
+      var code = res.getResponseCode();
+      if (code === 200) {
+        var data = JSON.parse(res.getContentText());
+        var cand = (data.candidates || [])[0];
+        var text = cand && cand.content && cand.content.parts ? cand.content.parts.map(function (p) { return p.text || ''; }).join('') : '';
+        if (!text) return { error: 'Risposta vuota da Gemini', code: 'refused' };
+        return { text: text, modello: modello };
+      }
+      ultimo = modello + ' ' + code + ': ' + res.getContentText().slice(0, 200);
+      if (code === 400 || code === 401 || code === 403) return { error: 'Gemini ha risposto ' + ultimo, code: 'upstream_error' };
+      if (code === 503 || code === 429 || code === 500) { Utilities.sleep(1500); continue; }
+      break; // 404 o altro: passa al modello successivo
+    }
+    if (!coda.length && !listaCaricata) { listaCaricata = true; coda = altriModelli_(key); }
+  }
+  if (/ 429/.test(ultimo)) return { error: 'Troppe richieste a Gemini, riprova tra poco', code: 'rate_limited' };
+  return { error: 'Gemini non disponibile in questo momento (' + ultimo + ')', code: 'upstream_error' };
 }
 
 // Prova veloce dall'editor: seleziona "provaGemini" e premi Esegui
