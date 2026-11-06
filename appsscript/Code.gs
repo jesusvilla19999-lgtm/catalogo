@@ -75,15 +75,18 @@ function ai(payload) {
     parts.push({ inline_data: { mime_type: 'image/jpeg', data: b64 } });
   });
 
+  var scadenza = Date.now() + 45000; // non aspettare più di 45 secondi in tutto
   var provati = {}, ultimo = '';
   var coda = MODELLI.slice();
   var listaCaricata = false;
-  while (coda.length) {
+  while (coda.length && Date.now() < scadenza) {
     var modello = coda.shift();
     if (provati[modello]) continue;
     provati[modello] = true;
-    for (var tentativo = 0; tentativo < 2; tentativo++) {
+    for (var tentativo = 0; tentativo < 2 && Date.now() < scadenza; tentativo++) {
+      var t0 = Date.now();
       var res = chiamaModello_(modello, key, parts);
+      Logger.log(modello + ' -> ' + res.getResponseCode() + ' in ' + (Date.now() - t0) + ' ms');
       var code = res.getResponseCode();
       if (code === 200) {
         var data = JSON.parse(res.getContentText());
@@ -97,10 +100,10 @@ function ai(payload) {
       if (code === 503 || code === 429 || code === 500) { Utilities.sleep(1500); continue; }
       break; // 404 o altro: passa al modello successivo
     }
-    if (!coda.length && !listaCaricata) { listaCaricata = true; coda = altriModelli_(key); }
+    if (!coda.length && !listaCaricata) { listaCaricata = true; coda = altriModelli_(key).filter(function (m) { return !provati[m]; }).slice(0, 3); }
   }
   if (/ 429/.test(ultimo)) return { error: 'Troppe richieste a Gemini, riprova tra poco', code: 'rate_limited' };
-  return { error: 'Gemini non disponibile in questo momento (' + ultimo + ')', code: 'upstream_error' };
+  return { error: 'Gemini è molto carico in questo momento, riprova tra qualche minuto (' + ultimo + ')', code: 'upstream_error' };
 }
 
 // Prova veloce dall'editor: seleziona "provaGemini" e premi Esegui
