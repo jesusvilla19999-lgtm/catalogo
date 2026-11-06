@@ -193,7 +193,7 @@ tr:last-child td{border-bottom:0}
 .src details li .c{font-family:var(--f-code);color:var(--code)}
 .src details li.unc{color:var(--obs)}
 .nosrc{font-size:14px;color:var(--muted);border:1px dashed var(--line);border-radius:12px;padding:12px}
-.addrow{display:grid;grid-template-columns:1fr auto 80px auto;gap:6px}
+.addrow{display:grid;grid-template-columns:1fr auto auto 96px auto;gap:6px}
 .addrow input,.addrow select{font:500 15px var(--f-ui);padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);min-width:0}
 .busy{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14.5px;display:flex;gap:10px;align-items:center}
 .busy::before{content:"";width:16px;height:16px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite;flex:none}
@@ -205,6 +205,11 @@ tr:last-child td{border-bottom:0}
 .kpi .v{font:600 28px var(--f-code);font-variant-numeric:tabular-nums}
 .kpi .s{font-size:13px;color:var(--muted)}
 .a15k .v{color:var(--accent)}
+.warnbox{background:var(--obs-bg);color:var(--obs);border-radius:12px;padding:10px 14px;font-size:14px}
+.linkbtn{border:0;background:none;color:inherit;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
+.wtag{display:block;margin-top:3px;font-size:12px;font-weight:600;color:var(--obs)}
+.sgc{color:var(--code)}
+.src details li .sg{font-style:normal;font:600 11px var(--f-code);color:var(--muted);margin-right:4px}
 .a15box{display:flex;gap:14px;justify-content:space-between;align-items:center;flex-wrap:wrap;background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:14px;padding:14px 16px}
 .a15box h3{margin:0;font-size:17px}.a15box p{margin:3px 0 0;font-size:14px;color:var(--muted)}
 .a15acts{display:flex;gap:8px;flex-wrap:wrap}
@@ -286,7 +291,7 @@ tr:last-child td{border-bottom:0}
       <div class="step-h"><span class="sn">2</span><div><h3>Conteggio aggiornato</h3><p>Puoi aggiungere più fonti: fogli a mano, file, righe inserite qui</p></div></div>
       <div id="newBox"></div>
       <div class="acts"><label class="btn btn-ghost up ai-only"><input type="file" id="newPhoto" accept="image/*" multiple hidden>Foto foglio a mano</label><label class="btn btn-ghost up"><input type="file" id="newFile" accept=".xlsx,.xls,.csv,.ods,.txt" multiple hidden>Carica file</label></div>
-      <form class="addrow" id="addForm" autocomplete="off"><input id="addCode" placeholder="Codice es. 768/050/4" aria-label="Codice"><select id="addSd" aria-label="Stato"><option value="0">Nuovo</option><option value="1">Recuperato</option><option value="4">Usato</option><option value="">Non indicato</option></select><input id="addQty" type="number" inputmode="numeric" placeholder="Pezzi" aria-label="Pezzi"><button class="btn btn-dark" type="submit">Aggiungi</button></form>
+      <form class="addrow" id="addForm" autocomplete="off"><input id="addCode" placeholder="Codice es. 768/050/4" aria-label="Codice"><select id="addSd" aria-label="Stato"><option value="0">Nuovo</option><option value="1">Recuperato</option><option value="4">Usato</option><option value="">Non indicato</option></select><select id="addSeg" aria-label="Segmento"><option value="">Segmento</option><option value="MO">M.O.</option><option value="PI">P.I.</option><option value="ECCED">ECCED</option><option value="NTW">Network</option></select><input id="addQty" type="text" inputmode="text" placeholder="Pezzi o −1/+3" aria-label="Pezzi contati oppure differenza con segno"><button class="btn btn-dark" type="submit">Aggiungi</button></form>
     </section>
   </div>
   <div class="busy" id="busy" hidden></div>
@@ -570,6 +575,11 @@ function showCand(list){
 const CODEMAP = {}; // "766/004" -> entry
 function buildCodeMap(){ DATA.forEach(e=>{ if(e.p){ const c=code(e); if(!CODEMAP[c]) CODEMAP[c]=e; } }); }
 const STATI = {'0':'Nuovo','1':'Recuperato','4':'Usato'};
+function normSeg(v){ const s=String(v??'').trim().toUpperCase().replace(/[\s.()]/g,''); if(!s||s==='NULL') return null;
+  if (/^(MO|M0|MW|MANOP|MANUTORD)/.test(s)) return 'MO'; if (/^(PI|P1|PIN|INVEST)/.test(s)) return 'PI'; if (/^ECC/.test(s)) return 'ECCED'; if (/^EMER/.test(s)) return 'EMERG';
+  if (/^(NTW|NETW|NW|RETE|COMM)/.test(s) || /^\d{6,}$/.test(s)) return 'NTW'; return s; }
+const SEGLBL = {MO:'M.O.', PI:'P.I.', ECCED:'ECCED', NTW:'Network', EMERG:'Emergenza', '*':'tutti i segmenti'};
+const segLbl = g => g==null ? '' : (SEGLBL[g] || g);
 const statoLbl = d => d==null||d==='' ? 'Stato non indicato' : (STATI[d] || 'Stato '+d);
 function parseCode(s){
   s = String(s??'').trim(); if(!s) return null;
@@ -583,7 +593,9 @@ function normCode(s){
   if (!m) return null;
   return `${m[1]}/${m[2].padStart(3,'0')}`;
 }
-const num = v => { if (typeof v==='number') return v; const t = String(v??'').replace(/\s/g,'').replace(',', '.'); return /^-?\d+(\.\d+)?$/.test(t) ? +t : NaN; };
+const num = v => { if (typeof v==='number') return v; let t = String(v??'').replace(/\s/g,'').replace(/[−–]/g,'-').replace(',', '.');
+  const par = /^[+-]?\(([+-]?[\d.]+)\)$/.exec(t); if (par) t = (t.startsWith('-')||par[1].startsWith('-') ? '-' : '') + par[1].replace(/^[+-]/,'');
+  t = t.replace(/^\+/,''); return /^-?\d+(\.\d+)?$/.test(t) ? +t : NaN; };
 
 const EXAMPLE = {
   example:true,
@@ -639,6 +651,9 @@ function guessRows(aoa){
   { let bs=0; for (let j=0;j<W;j++){ if(used.has(j)) continue; const sc=hscore(j); if(sc>bs){bs=sc;qtyCol=j} } }
   if (qtyCol<0){ let bestN=0; for (let j=W-1;j>=0;j--){ if(used.has(j)) continue; const k=col(j).filter(x=>!isNaN(num(x))).length; if(k>bestN){bestN=k;qtyCol=j} } }
   if (qtyCol<0) return null;
+  let segCol=-1; for (let j=0;j<W;j++){ if(used.has(j)||j===qtyCol) continue; if (head.some(r=>/segment|^seg\.?$/.test(r[j]||''))){ segCol=j; break; } }
+  const isDiff = head.some(r=>/diff|scost|delta|\+\/-|±/.test(r[qtyCol]||'')) || (()=>{ const v=col(qtyCol).map(num).filter(x=>!isNaN(x)); return v.length>2 && v.filter(x=>x<0).length >= v.length*0.3; })();
+  if (segCol>=0) used.add(segCol);
   let descCol=-1, bestL=0, umCol=-1;
   for (let j=0;j<W;j++){ if (head.some(r=>/unit[aà].*mis|^u\.?m\.?$|^um$/.test(r[j]||''))){ umCol=j; break; } }
   for (let j=0;j<W;j++){ if(used.has(j)||j===qtyCol) continue; if (head.some(r=>/descr.*mat|^descrizione$|^materiale$/.test(r[j]||'') && !/magazz|network/.test(r[j]||''))){ descCol=j; break; } }
@@ -649,13 +664,15 @@ function guessRows(aoa){
     const q = num(r[qtyCol]);
     if (!pc || isNaN(q)) continue;
     let sd = pc.sd; if (sdCol>=0){ const v=String(r[sdCol]??'').trim(); const m=v.match(/^\d$/); if(m) sd=v; else if(/^nuov/i.test(v)) sd='0'; else if(/recup|altra/i.test(v)) sd='1'; else if(/usat/i.test(v)) sd='4'; }
-    rows.push({code:pc.code, sd, qty:q, desc: descCol>=0 ? String(r[descCol]??'').trim() : '', um: umCol>=0 ? String(r[umCol]??'').trim() : ''});
+    rows.push({code:pc.code, sd, seg: segCol>=0 ? normSeg(r[segCol]) : null, qty:q, diff:isDiff, desc: descCol>=0 ? String(r[descCol]??'').trim() : '', um: umCol>=0 ? String(r[umCol]??'').trim() : ''});
   }
   return rows.length ? rows : null;
 }
 function catalogCodes(){ return Object.entries(CODEMAP).map(([c,e])=>`${c} ${e.t}`).join('\n'); }
 function cleanAI(list){
-  return (Array.isArray(list)?list:[]).map(x=>{ const pc = parseCode(x.codice); const sd = x.stato!=null && /^\d$/.test(String(x.stato)) ? String(x.stato) : (pc?.sd ?? null); return {code: pc?.code||null, sd, desc:String(x.descrizione||''), qty:num(x.quantita), unc:!!x.incerto}; }).filter(x=>!isNaN(x.qty) && (x.code||x.desc));
+  return (Array.isArray(list)?list:[]).map(x=>{ const pc = parseCode(x.codice); const sd = x.stato!=null && /^\d$/.test(String(x.stato)) ? String(x.stato) : (pc?.sd ?? null); const q = num(x.quantita);
+    const diff = String(x.tipo||'').toLowerCase().startsWith('diff') || (q<0) || /^\s*[+-]/.test(String(x.quantita));
+    return {code: pc?.code||null, sd, seg: normSeg(x.segmento), desc:String(x.descrizione||''), qty:q, diff, unc:!!x.incerto}; }).filter(x=>!isNaN(x.qty) && (x.code||x.desc));
 }
 async function aiTable(aoa){
   if (!sample) throw {code:'no_ai'};
@@ -663,7 +680,10 @@ async function aiTable(aoa){
   const p = `Questo è un foglio di inventario di materiali per la linea di contatto TE RFI, in formato CSV (separatore ;). Estrai ogni materiale con la sua quantità.
 Il codice ha la forma categoria/progressivo, es. 766/004 (a volte scritto 766-4, 766.004 o in due colonne). Se manca il codice ma c'è la descrizione, cerca il codice nell'elenco del catalogo qui sotto; se non sei sicuro metti "incerto": true.
 Dopo il progressivo può esserci una cifra di stato del pezzo (es. 766/0050 = 766/005 stato 0; anche 768/050/0 o 7680500): 0 = nuovo, 1 = recuperato da un'altra parte, 4 = usato; riportala in "stato" (null se non c'è).
-Rispondi SOLO con JSON: {"righe":[{"codice":"766/004" oppure null,"stato":"0" oppure null,"descrizione":"...","quantita":numero,"incerto":false}]}
+Accanto a ogni riga può esserci il segmento di stock: M.O. (o MO, Mo), P.I. (o PI), ECCED (eccedenze), NTW (network/commessa) o un numero di commessa; riportalo in "segmento" (null se non c'è).
+Il numero può essere una QUANTITÀ CONTATA (es. "12 pz") oppure una DIFFERENZA rispetto al magazzino, scritta con segno o tra parentesi: "(-1)", "-3", "+(12)", "(+3)". Per le differenze metti "tipo":"differenza" e la quantità con il segno (es. -1, 12); per i conteggi "tipo":"conteggio".
+Ignora le righe completamente cancellate o scarabocchiate. Le righe attraversate da una sola linea leggile ma metti "incerto": true. Ignora date, firme e nomi.
+Rispondi SOLO con JSON: {"righe":[{"codice":"766/004" oppure null,"stato":"0" oppure null,"segmento":"MO" oppure null,"tipo":"differenza" oppure "conteggio","descrizione":"...","quantita":numero,"incerto":false}]}
 
 FOGLIO:
 ${csv}
@@ -675,10 +695,13 @@ ${catalogCodes()}`;
 }
 async function aiPhoto(file){
   if (!sample) throw {code:'no_ai'};
-  const p = `La foto mostra un foglio (spesso scritto a mano) con un conteggio di materiali per la linea di contatto TE RFI. Leggi ogni riga: codice, descrizione se c'è, quantità contata.
+  const p = `La foto mostra un foglio (spesso scritto a mano) con un conteggio di materiali (o con le differenze trovate rispetto al magazzino) per la linea di contatto TE RFI. Leggi ogni riga: codice, stato, segmento, descrizione se c'è, quantità o differenza.
 Il codice ha la forma categoria/progressivo, es. 766/004 (può essere scritto 766-4, 766 004, oppure solo il progressivo sotto un'intestazione di categoria). Usa l'elenco del catalogo qui sotto per correggere codici letti male e per trovare il codice dei materiali scritti solo a nome. Se una riga è difficile da leggere metti "incerto": true. Non inventare righe che non ci sono.
 Dopo il progressivo può esserci una cifra di stato del pezzo (es. 766/0050 = 766/005 stato 0; anche 768/050/0 o 7680500): 0 = nuovo, 1 = recuperato da un'altra parte, 4 = usato; riportala in "stato" (null se non c'è).
-Rispondi SOLO con JSON: {"righe":[{"codice":"766/004" oppure null,"stato":"0" oppure null,"descrizione":"...","quantita":numero,"incerto":false}]}
+Accanto a ogni riga può esserci il segmento di stock: M.O. (o MO, Mo), P.I. (o PI), ECCED (eccedenze), NTW (network/commessa) o un numero di commessa; riportalo in "segmento" (null se non c'è).
+Il numero può essere una QUANTITÀ CONTATA (es. "12 pz") oppure una DIFFERENZA rispetto al magazzino, scritta con segno o tra parentesi: "(-1)", "-3", "+(12)", "(+3)". Per le differenze metti "tipo":"differenza" e la quantità con il segno (es. -1, 12); per i conteggi "tipo":"conteggio".
+Ignora le righe completamente cancellate o scarabocchiate. Le righe attraversate da una sola linea leggile ma metti "incerto": true. Ignora date, firme e nomi.
+Rispondi SOLO con JSON: {"righe":[{"codice":"766/004" oppure null,"stato":"0" oppure null,"segmento":"MO" oppure null,"tipo":"differenza" oppure "conteggio","descrizione":"...","quantita":numero,"incerto":false}]}
 
 CATALOGO (codice descrizione):
 ${catalogCodes()}`;
@@ -710,23 +733,42 @@ async function addNew(files, isPhoto){
 }
 
 /* --- confronto --- */
-function keyOf(r){ return (r.code || 'd:'+norm(r.desc)) + '|' + (r.sd??''); }
+function keyOf(r){ return (r.code || 'd:'+norm(r.desc)) + '|' + (r.sd??'') + '|' + (r.seg??''); }
 function compute(){
   const M = {};
-  const get = r => { const k = keyOf(r); const it = M[k] ||= {k, code:r.code, sd:r.sd??null, desc:'', um:'', old:null, nw:null, srcs:[], unc:false}; if(!it.desc && r.desc) it.desc=r.desc; if(!it.um && r.um) it.um=r.um; return it; };
-  (INV.old?.rows||[]).forEach(r=>{ const it=get(r); it.old=(it.old||0)+r.qty; });
-  const oldSd = {}; (INV.old?.rows||[]).forEach(r=>{ if(r.code) (oldSd[r.code] ||= new Set()).add(r.sd??''); });
+  const oldRows = (INV.old?.rows||[]).map(r=>({...r, seg: r.seg??null}));
+  const oldSd = {}, oldSeg = {};
+  oldRows.forEach(r=>{ if(!r.code) return; (oldSd[r.code] ||= new Set()).add(r.sd??''); (oldSeg[r.code+'|'+(r.sd??'')] ||= new Set()).add(r.seg??''); });
   const fixSd = r => { if (r.sd!=null || !r.code || !oldSd[r.code]) return r; const st=[...oldSd[r.code]].filter(x=>x!==''); const sd = st.length===1 ? st[0] : (st.includes('0') ? '0' : null); return sd==null ? r : {...r, sd, sdGuess:true}; };
-  INV.news.forEach(s=>s.rows.map(fixSd).forEach(r=>{ const it=get(r); if(r.sdGuess) it.sdGuess=true; it.nw=(it.nw||0)+r.qty; it.srcs.push(s.name); if(r.unc) it.unc=true; }));
+  const collapse = new Set();
+  const newRows = [];
+  INV.news.forEach(src=>src.rows.forEach(r0=>{ let r = fixSd({...r0, seg: r0.seg??null}); r.src = src.name;
+    if (r.code){ const cs = r.code+'|'+(r.sd??''); const segs = [...(oldSeg[cs]||[])].filter(x=>x!=='');
+      if (r.seg==null){ if (segs.length===1) r = {...r, seg:segs[0], segGuess:true}; else if (segs.length>1) collapse.add(cs); }
+      else if (r.seg==='NTW' && segs.length && !segs.includes('NTW')){ /* lascia NTW */ } }
+    newRows.push(r); }));
+  const segOf = r => r.code && collapse.has(r.code+'|'+(r.sd??'')) ? '*' : r.seg;
+  const get = r => { const rr = {...r, seg: segOf(r)}; const k = keyOf(rr);
+    const it = M[k] ||= {k, code:r.code, sd:r.sd??null, seg:rr.seg??null, desc:'', um:'', old:null, cnt:null, dlt:null, srcs:[], unc:false};
+    if(!it.desc && r.desc) it.desc=r.desc; if(!it.um && r.um) it.um=r.um; return it; };
+  oldRows.forEach(r=>{ const it=get(r); it.old=(it.old||0)+r.qty; });
+  newRows.forEach(r=>{ const it=get(r); if(r.sdGuess) it.sdGuess=true; if(r.segGuess) it.segGuess=true;
+    if (r.diff) it.dlt=(it.dlt||0)+r.qty; else it.cnt=(it.cnt||0)+r.qty; it.srcs.push(r.src); if(r.unc) it.unc=true; });
   const items = Object.values(M);
+  const diffMode = newRows.length>0 && newRows.every(r=>r.diff);
   for (const it of items){
+    it.nw = it.cnt!=null ? it.cnt + (it.dlt||0) : (it.dlt!=null ? (it.old||0) + it.dlt : null);
     if (INV.over[it.k]!=null){ it.nw = INV.over[it.k]; it.edited = true; }
+    if (diffMode && it.nw==null && it.old!=null){ it.nw = it.old; it.same = true; }
     it.diff = (it.nw??0) - (it.old??0);
     it.st = it.old==null ? 'nuovo' : it.nw==null ? 'nc' : it.diff>0 ? 'piu' : it.diff<0 ? 'meno' : 'ok';
+    it.a15 = (it.st==='piu'||it.st==='meno'||it.st==='nuovo') ? it.diff : 0;
+    it.neg = it.nw!=null && it.nw<0; it.nofile = it.old==null && it.dlt!=null;
     it.srcs = [...new Set(it.srcs)];
+    if(!it.desc) it.desc = (it.code&&CODEMAP[it.code]?.t)||'';
   }
-  items.forEach(i=>{ if(!i.desc) i.desc = (i.code&&CODEMAP[i.code]?.t)||''; i.a15 = i.st==='nuovo' ? (i.nw||0) : (i.st==='piu' ? i.diff : 0); });
-  items.sort((a,b)=> (a.code||'~'+a.desc).localeCompare(b.code||'~'+b.desc) || String(a.sd??'9').localeCompare(String(b.sd??'9')));
+  items.sort((a,b)=> (a.code||'~'+a.desc).localeCompare(b.code||'~'+b.desc) || String(a.sd??'9').localeCompare(String(b.sd??'9')) || String(a.seg??'').localeCompare(String(b.seg??'')));
+  items.diffMode = diffMode;
   return items;
 }
 function tokens(t){ return new Set(norm(t).replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w.length>2)); }
@@ -740,7 +782,7 @@ function findSwaps(items){
     for (const p of plus){ if(usedP.has(p.k)) continue;
       const em = m.code&&CODEMAP[m.code], ep = p.code&&CODEMAP[p.code];
       let s = 0, why = '';
-      if (m.code && m.code===p.code && m.sd!==p.sd){ s = 3; why = `stesso pezzo in stato diverso: ${statoLbl(m.sd).toLowerCase()} → ${statoLbl(p.sd).toLowerCase()}`; }
+      if (m.code && m.code===p.code && (m.sd!==p.sd || m.seg!==p.seg)){ s = 3; why = m.sd!==p.sd ? `stesso pezzo in stato diverso: ${statoLbl(m.sd).toLowerCase()} → ${statoLbl(p.sd).toLowerCase()}` : `stesso pezzo in segmento diverso: ${segLbl(m.seg)} → ${segLbl(p.seg)}`; }
       else if (m.sd!==p.sd) continue;
       else if (em && ep && em.k===ep.k){ s = 2; why = 'stessa voce del catalogo, cambia solo la misura/variante'; }
       else { const sim = similar(m.desc,p.desc); if (sim>=0.6 && (!m.code||!p.code||m.code.slice(0,3)===p.code.slice(0,3))){ s = 1+sim/2; why = 'materiali molto simili nella descrizione'; } }
@@ -754,15 +796,16 @@ function findSwaps(items){
 }
 
 /* --- render --- */
-const ST = {ok:'Uguale', piu:'In più', meno:'In meno', nc:'Non contato', nuovo:'Solo nel conteggio'};
+const ST = {ok:'Uguale', piu:'In più', meno:'In meno', nc:'Non contato', nuovo:'Non nel file'};
 const fmt = n => n==null ? '–' : (Math.round(n*100)/100).toLocaleString('it-IT');
 const sgn = n => n>0 ? `+${fmt(n)}` : fmt(n);
 function srcHTML(s, removable, which){
-  const tot = s.rows.reduce((a,r)=>a+r.qty,0), unc = s.rows.filter(r=>r.unc).length;
+  const nd = s.rows.filter(r=>r.diff).length, tot = s.rows.filter(r=>!r.diff).reduce((a,r)=>a+r.qty,0), unc = s.rows.filter(r=>r.unc).length;
+  const dp = s.rows.filter(r=>r.diff&&r.qty>0).reduce((a,r)=>a+r.qty,0), dm = s.rows.filter(r=>r.diff&&r.qty<0).reduce((a,r)=>a+r.qty,0);
   const icon = s.kind==='foto' ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>' : s.kind==='mano' ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></svg>';
-  return `<div class="src"><span class="ic">${icon}</span><div><div class="nm">${esc(s.name)}</div><div class="sub">${s.rows.length} righe · ${fmt(tot)} pezzi${unc?` · <span class="neg">${unc} da verificare</span>`:''}</div></div>
+  return `<div class="src"><span class="ic">${icon}</span><div><div class="nm">${esc(s.name)}</div><div class="sub">${s.rows.length} righe · ${nd===s.rows.length ? `differenze ${sgn(dp)} / ${fmt(dm)}` : `${fmt(tot)} pezzi`}${nd && nd<s.rows.length ? ` · ${nd} differenze`:''}${unc?` · <span class="neg">${unc} da verificare</span>`:''}</div></div>
     ${removable?`<button class="rm" data-rm="${which}" data-id="${esc(s.id||'')}" aria-label="Rimuovi ${esc(s.name)}">×</button>`:'<span></span>'}
-    <details><summary>Vedi righe lette</summary><ul>${s.rows.map(r=>`<li class="${r.unc?'unc':''}"><span><span class="c">${esc(r.code ? r.code+(r.sd??'') : 'senza codice')}</span> ${esc(r.desc || (r.code&&CODEMAP[r.code]?CODEMAP[r.code].t:''))}</span><b>${fmt(r.qty)}</b></li>`).join('')}</ul></details></div>`;
+    <details><summary>Vedi righe lette</summary><ul>${s.rows.map(r=>`<li class="${r.unc?'unc':''}"><span><span class="c">${esc(r.code ? r.code+(r.sd??'') : 'senza codice')}</span> ${r.seg?`<em class="sg">${esc(segLbl(r.seg))}</em> `:''}${esc(r.desc || (r.code&&CODEMAP[r.code]?CODEMAP[r.code].t:''))}</span><b class="${r.diff?(r.qty<0?'neg':'pos'):''}">${r.diff?sgn(r.qty):fmt(r.qty)}</b></li>`).join('')}</ul></details></div>`;
 }
 function renderCtrl(){
   if (!INV) return;
@@ -779,26 +822,29 @@ function renderCtrl(){
   const swaps = findSwaps(items);
   const TOT = {}; items.forEach(i=>{ if(!i.code) return; const t = TOT[i.code] ||= {o:0,n:0,k:0}; t.o += i.old||0; t.n += i.nw||0; t.k++; });
   const totHTML = i => { const t = i.code && TOT[i.code]; if(!t) return ''; const d = t.n - t.o;
-    if (t.k<2) return ''; return `<span class="tot" title="Totale di ${esc(i.code)} sommando tutti gli stati">Tutti gli stati <b>${fmt(t.o)} → ${fmt(t.n)}</b> <span class="${d>0?'pos':d<0?'neg':'okc'}">${d===0?'=':sgn(d)}</span></span>`; };
-  const a15 = items.filter(i=>i.a15>0);
-  const shown = items.filter(i=> FILTER==='all' ? true : FILTER==='diff' ? i.st!=='ok' : FILTER==='a15' ? i.a15>0 : i.st===FILTER);
+    if (t.k<2) return ''; return `<span class="tot" title="Totale di ${esc(i.code)} sommando tutti gli stati e segmenti">Totale codice <b>${fmt(t.o)} → ${fmt(t.n)}</b> <span class="${d>0?'pos':d<0?'neg':'okc'}">${d===0?'=':sgn(d)}</span></span>`; };
+  const a15 = items.filter(i=>i.a15!==0);
+  const a15p = a15.filter(i=>i.a15>0).reduce((s,i)=>s+i.a15,0), a15m = a15.filter(i=>i.a15<0).reduce((s,i)=>s+i.a15,0);
+  const warn = items.filter(i=>i.neg||i.nofile);
+  const shown = items.filter(i=> FILTER==='all' ? true : FILTER==='diff' ? i.st!=='ok' : FILTER==='a15' ? i.a15!==0 : FILTER==='warn' ? (i.neg||i.nofile) : i.st===FILTER);
   const fchip = (k,l,n) => `<button class="fchip" data-f="${k}" aria-pressed="${FILTER===k}">${l} <b>${n}</b></button>`;
   R.innerHTML = `
     <div class="kpis">
       <div class="kpi"><span class="l">File vecchio</span><span class="v">${fmt(totOld)}</span><span class="s">pezzi · ${items.filter(i=>i.old!=null).length} articoli</span></div>
-      <div class="kpi"><span class="l">Conteggio aggiornato</span><span class="v">${fmt(totNew)}</span><span class="s">pezzi · ${items.filter(i=>i.nw!=null).length} articoli</span></div>
-      <div class="kpi hl"><span class="l">Differenza</span><span class="v ${totNew-totOld>0?'pos':totNew-totOld<0?'neg':''}">${sgn(totNew-totOld)}</span><span class="s">pezzi, aggiornato meno vecchio</span></div>
-      <div class="kpi a15k"><span class="l">Da fare A15</span><span class="v">${a15.length}</span><span class="s">${a15.length?`materiali · ${fmt(a15.reduce((s,i)=>s+i.a15,0))} pezzi in più`:'nessun pezzo in più'}</span></div>
+      <div class="kpi"><span class="l">${items.diffMode?'Dopo le differenze':'Conteggio aggiornato'}</span><span class="v">${fmt(totNew)}</span><span class="s">pezzi · ${items.diffMode?`${items.filter(i=>!i.same).length} righe dai fogli`:`${items.filter(i=>i.nw!=null).length} articoli`}</span></div>
+      <div class="kpi hl"><span class="l">Differenza</span><span class="v ${totNew-totOld>0?'pos':totNew-totOld<0?'neg':''}">${sgn(totNew-totOld)}</span><span class="s">pezzi rispetto al file</span></div>
+      <div class="kpi a15k"><span class="l">Da fare A15</span><span class="v">${a15.length}</span><span class="s">${a15.length?`righe · <span class="pos">${sgn(a15p)}</span> in più · <span class="neg">${fmt(a15m)}</span> in meno`:'nessuna differenza'}</span></div>
       <div class="kpi"><span class="l">Articoli da guardare</span><span class="v">${ndiff}</span><span class="s">su ${items.length} · ${cnt.ok||0} uguali</span></div>
     </div>
-    ${a15.length?`<div class="a15box"><div><h3>Fai l’A15 per ${a15.length} ${a15.length===1?'materiale':'materiali'}</h3><p>Hai trovato più pezzi di quelli scritti nel file: vanno regolarizzati con l’A15.</p></div><div class="a15acts"><button class="btn btn-dark" data-f2="a15">Vedi l’elenco</button>${DL?'<button class="btn btn-a15" id="a15Btn">Scarica elenco A15</button>':''}</div></div>`:''}
-    ${swaps.length?`<div class="swaps"><h3>Possibili scambi tra pezzi</h3>${swaps.map(s=>`<div class="swap"><span class="c">${esc(s.m.code||s.m.desc)}${s.m.sd!=null?' '+esc(statoLbl(s.m.sd).toLowerCase()):''}</span> <span class="neg">${sgn(s.m.st==='nc'?-s.m.old:s.m.diff)}</span> ↔ <span class="c">${esc(s.p.code||s.p.desc)}${s.p.sd!=null?' '+esc(statoLbl(s.p.sd).toLowerCase()):''}</span> <span class="pos">${sgn(s.p.diff)}</span><span class="why">${s.exact?(s.m.code===s.p.code ? 'Le quantità si compensano: probabilmente è cambiato lo stato del pezzo (o è stato registrato con lo stato sbagliato)' : 'Le quantità si compensano: probabilmente sono stati contati o registrati uno al posto dell’altro'):'Forse in parte scambiati'} (${esc(s.why)}).</span></div>`).join('')}</div>`:''}
-    <div class="restools"><div class="filters">${fchip('a15','A15',a15.length)}${fchip('diff','Differenze',ndiff)}${fchip('meno','In meno',cnt.meno||0)}${fchip('piu','In più',cnt.piu||0)}${fchip('nc','Non contati',cnt.nc||0)}${fchip('nuovo','Solo nel conteggio',cnt.nuovo||0)}${fchip('ok','Uguali',cnt.ok||0)}${fchip('all','Tutti',items.length)}</div>
+    ${a15.length?`<div class="a15box"><div><h3>Fai l’A15 per ${a15.length} ${a15.length===1?'riga':'righe'}</h3><p>Ci sono differenze rispetto al file (<b class="pos">${sgn(a15p)}</b> pezzi in più, <b class="neg">${fmt(a15m)}</b> in meno): vanno regolarizzate con l’A15, sia in più sia in meno.</p></div><div class="a15acts"><button class="btn btn-dark" data-f2="a15">Vedi l’elenco</button>${DL?'<button class="btn btn-a15" id="a15Btn">Scarica elenco A15</button>':''}</div></div>`:''}
+    ${warn.length?`<div class="warnbox"><b>Da controllare: ${warn.length} ${warn.length===1?'riga':'righe'}</b> · codici o segmenti che non ci sono nel file, oppure quantità che andrebbero sotto zero. <button class="linkbtn" data-f2="warn">Vedi quali</button></div>`:''}
+    ${swaps.length?`<div class="swaps"><h3>Possibili scambi tra pezzi</h3>${swaps.map(s=>`<div class="swap"><span class="c">${esc(s.m.code?s.m.code+(s.m.sd??''):s.m.desc)}${s.m.seg?' '+esc(segLbl(s.m.seg)):''}</span> <span class="neg">${sgn(s.m.st==='nc'?-s.m.old:s.m.diff)}</span> ↔ <span class="c">${esc(s.p.code?s.p.code+(s.p.sd??''):s.p.desc)}${s.p.seg?' '+esc(segLbl(s.p.seg)):''}</span> <span class="pos">${sgn(s.p.diff)}</span><span class="why">${s.exact?(s.m.code===s.p.code ? 'Le quantità si compensano: probabilmente è cambiato lo stato o il segmento del pezzo (o è stato registrato in quello sbagliato)' : 'Le quantità si compensano: probabilmente sono stati contati o registrati uno al posto dell’altro'):'Forse in parte scambiati'} (${esc(s.why)}).</span></div>`).join('')}</div>`:''}
+    <div class="restools"><div class="filters">${fchip('a15','A15',a15.length)}${warn.length?fchip('warn','Da controllare',warn.length):''}${fchip('diff','Differenze',ndiff)}${fchip('meno','In meno',cnt.meno||0)}${fchip('piu','In più',cnt.piu||0)}${fchip('nc','Non contati',cnt.nc||0)}${fchip('nuovo','Non nel file',cnt.nuovo||0)}${fchip('ok','Uguali',cnt.ok||0)}${fchip('all','Tutti',items.length)}</div>
       <button class="btn btn-ghost up" id="exportBtn" hidden>Scarica risultato (CSV)</button></div>
-    <div class="restbl"><table><thead><tr><th>Codice · stato</th><th>Materiale</th><th class="n">Vecchio</th><th class="n">Aggiornato</th><th class="n">Diff.</th><th>Stato</th></tr></thead><tbody>
-    ${shown.length ? shown.map(i=>`<tr><td class="cd" data-code="${esc(i.code||'')}">${esc(i.code ? i.code+(i.sd??'') : '—')}${i.code?`<span class="sd sd${esc(i.sd??'x')}">${esc(statoLbl(i.sd))}</span>${totHTML(i)}`:''}</td><td class="ds">${esc(i.desc)}${i.srcs.length?`<span class="srcs">${esc(i.srcs.join(' + '))}${i.edited?' · corretto a mano':''}${i.unc?' · lettura da verificare':''}${i.sdGuess?' · stato preso dal file':''}</span>`:''}</td>
+    <div class="restbl"><table><thead><tr><th>Codice · stato · segmento</th><th>Materiale</th><th class="n">Vecchio</th><th class="n">Aggiornato</th><th class="n">Diff.</th><th>Stato</th></tr></thead><tbody>
+    ${shown.length ? shown.map(i=>`<tr><td class="cd" data-code="${esc(i.code||'')}">${esc(i.code ? i.code+(i.sd??'') : '—')}${i.code?`<span class="sd sd${esc(i.sd??'x')}">${esc(statoLbl(i.sd))}${i.seg?` · <span class="sgc">${esc(segLbl(i.seg))}</span>`:''}</span>${totHTML(i)}`:''}</td><td class="ds">${esc(i.desc)}${i.srcs.length?`<span class="srcs">${esc(i.srcs.join(' + '))}${i.edited?' · corretto a mano':''}${i.unc?' · lettura da verificare':''}${i.sdGuess?' · stato preso dal file':''}${i.segGuess?' · segmento preso dal file':''}</span>`:''}${i.nofile?'<span class="wtag">Non presente nel file con questo segmento</span>':''}${i.neg?'<span class="wtag">Andrebbe sotto zero: controlla</span>':''}</td>
       <td class="n">${fmt(i.old)}</td><td class="n"><input class="qin${i.edited?' ed':''}" type="number" inputmode="decimal" data-k="${esc(i.k)}" value="${i.nw??''}" placeholder="–" aria-label="Quantità aggiornata ${esc(i.code||i.desc)}"></td>
-      <td class="n ${i.diff>0?'pos':i.diff<0?'neg':''}">${i.st==='nc'?'–':sgn(i.diff)}</td><td><span class="st ${i.st}">${ST[i.st]}</span>${i.a15>0?`<span class="st a15">A15 · ${fmt(i.a15)}</span>`:''}<span class="ttot">${i.st==='nc' ? 'Totale: da contare' : `Totale <b>${fmt(i.nw)}</b>`}</span></td></tr>`).join('') : `<tr><td colspan="6" class="info">Nessun articolo in questo filtro.</td></tr>`}
+      <td class="n ${i.diff>0?'pos':i.diff<0?'neg':''}">${i.st==='nc'?'–':sgn(i.diff)}</td><td><span class="st ${i.st}">${ST[i.st]}</span>${i.a15!==0?`<span class="st a15">A15 ${sgn(i.a15)}</span>`:''}<span class="ttot">${i.st==='nc' ? 'Totale: da contare' : `Totale <b>${fmt(i.nw)}</b>`}</span></td></tr>`).join('') : `<tr><td colspan="6" class="info">Nessun articolo in questo filtro.</td></tr>`}
     </tbody></table></div>
     <p class="fine">Puoi correggere a mano la colonna “Aggiornato”: la differenza si ricalcola subito. Tocca un codice per vedere il disegno.</p>`;
   if (DL) $('#exportBtn').hidden = false;
@@ -827,13 +873,13 @@ $('#newFile').onchange = ev => { const f=[...ev.target.files]; ev.target.value='
 $('#newPhoto').onchange = ev => { const f=[...ev.target.files]; ev.target.value=''; if(f.length) addNew(f,true); };
 $('#addForm').onsubmit = ev => {
   ev.preventDefault();
-  const pc = parseCode($('#addCode').value), q = num($('#addQty').value), c = pc?.code;
+  const qs = $('#addQty').value.trim().replace('−','-'), pc = parseCode($('#addCode').value), q = num(qs.replace(/[()]/g,'')), c = pc?.code, isD = /^[(]?\s*[+-]/.test(qs);
   const sd = pc?.sd ?? ($('#addSd').value || null);
-  if (!c || isNaN(q)){ busy('Scrivi il codice come 768/050 e il numero di pezzi.', true); return; }
+  if (!c || isNaN(q)){ busy('Scrivi il codice come 766/0720 e il numero di pezzi (oppure la differenza con il segno, es. -1 o +3).', true); return; }
   busy();
   if (INV.example) INV = {old:null, news:[], over:{}};
   let s = INV.news.find(s=>s.kind==='mano'); if(!s){ s = {id:'mano', name:'Inserito a mano', kind:'mano', rows:[]}; INV.news.push(s); }
-  s.rows.push({code:c, sd, qty:q, desc:''}); saveInv(); renderCtrl();
+  s.rows.push({code:c, sd, seg: $('#addSeg').value || null, qty:q, diff:isD, desc:''}); saveInv(); renderCtrl();
   $('#addCode').value=''; $('#addQty').value=''; $('#addCode').focus();
 };
 $('#startNew').onclick = () => { INV = {old:null, news:[], over:{}}; FILTER='diff'; saveInv(); renderCtrl(); };
@@ -841,14 +887,14 @@ $('#startNew').onclick = () => { INV = {old:null, news:[], over:{}}; FILTER='dif
 let DL = null;
 (async()=>{ try{ if(window.claude){ DL = await claude.use('downloads'); if(INV) renderCtrl(); } }catch(e){} })();
 async function exportA15(){
-  const items = compute().filter(i=>i.a15>0);
-  const d = new Date().toLocaleDateString('it-IT');
-  const lines = [['Materiale','Descrizione','Unità di misura','Quantità in più','Quantità a sistema','Quantità contata','Stato pezzo','Fonti','Data controllo'].join(';')].concat(items.map(i=>[i.code?i.code+(i.sd??''):'', '"'+i.desc.replace(/"/g,'""')+'"', i.um||'NR', String(i.a15).replace('.',','), i.old??0, i.nw??0, i.code?statoLbl(i.sd):'', i.srcs.join(' + '), d].join(';')));
+  const items = compute().filter(i=>i.a15!==0);
+  const d = new Date().toLocaleDateString('it-IT'); const n = v => String(v??0).replace('.',',');
+  const lines = [['Materiale','Descrizione','Segmento','Unità di misura','Differenza','Tipo','Quantità a sistema','Quantità reale','Stato pezzo','Note','Fonti','Data controllo'].join(';')].concat(items.map(i=>[i.code?i.code+(i.sd??''):'', '"'+i.desc.replace(/"/g,'""')+'"', segLbl(i.seg), i.um||'NR', (i.a15>0?'+':'')+n(i.a15), i.a15>0?'In più':'In meno', n(i.old), n(i.nw), i.code?statoLbl(i.sd):'', [i.nofile?'non presente nel file':'', i.neg?'andrebbe sotto zero':'', i.unc?'lettura da verificare':''].filter(Boolean).join(', '), i.srcs.join(' + '), d].join(';')));
   try{ await DL.save({filename:'elenco_A15_'+d.replace(/\//g,'-')+'.csv', data:'\ufeff'+lines.join('\n')}); }catch(e){}
 }
 async function exportCSV(){
   const items = compute();
-  const lines = [['Codice','Stato pezzo','Materiale','Vecchio','Aggiornato','Differenza','Esito','Totale','Fonti'].join(';')].concat(items.map(i=>[i.code?i.code+(i.sd??''):'', i.code?statoLbl(i.sd):'', '"'+i.desc.replace(/"/g,'""')+'"', i.old??'', i.nw??'', i.st==='nc'?'':i.diff, ST[i.st], i.st==='nc'?'da contare':(i.nw??''), i.srcs.join(' + ')].join(';')));
+  const lines = [['Codice','Stato pezzo','Segmento','Materiale','Vecchio','Aggiornato','Differenza','Esito','Totale','Fonti'].join(';')].concat(items.map(i=>[i.code?i.code+(i.sd??''):'', i.code?statoLbl(i.sd):'', segLbl(i.seg), '"'+i.desc.replace(/"/g,'""')+'"', i.old??'', i.nw??'', i.st==='nc'?'':i.diff, ST[i.st], i.st==='nc'?'da contare':(i.nw??''), i.srcs.join(' + ')].join(';')));
   try{ await DL.save({filename:'controllo_incrociato.csv', data:'﻿'+lines.join('\n')}); }catch(e){}
 }
 

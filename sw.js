@@ -1,5 +1,5 @@
 // Service worker: l'app si apre anche senza rete con i dati già visti
-const V = 'catalogo-te-v4';
+const V = 'catalogo-te-v5';
 const CORE = ['./', 'index.html', 'shim.js', 'config.js', 'manifest.webmanifest', 'data.json', 'covers.json', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
