@@ -14,7 +14,7 @@
 
 // Modelli da provare in ordine. Se uno è occupato o non esiste più si passa al successivo,
 // e alla fine si prova qualunque altro modello "flash" disponibile per la tua chiave.
-var MODELLI = ['gemini-3.8-flash', 'gemini-3.8-flash-lite', 'gemini-3-flash', 'gemini-flash-latest'];
+var MODELLI = ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
